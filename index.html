@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Pitch Perfect — Soccer Spacing & Offside Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- MENU -->
+  <section id="menu" class="screen active">
+    <div class="logo">
+      <div class="ball">⚽</div>
+      <h1 class="title">Pitch Perfect</h1>
+      <p class="tagline">Learn where to BE on the field — spacing, shape and the offside rule.</p>
+    </div>
+    <div class="me-row">
+      <canvas id="menuAvatar" width="80" height="100"></canvas>
+      <div class="me-info"><b id="menuAvatarName">Your player</b><span id="menuAvatarSet">Kids set</span></div>
+      <button class="btn cyan small" id="menuAvatarBtn">✏️ Edit avatar</button>
+      <button class="btn ghost small camBtn">🏟️ Full</button>
+    </div>
+
+    <div class="menu-group"><div class="group-label">PLAY A MATCH</div>
+      <div class="modes three">
+        <button class="card guide" data-mode="guide"><span class="pill">START HERE</span><div class="icon">🎓</div><h2>First Game</h2><p>60-second guided game. Learn to move, pass, shoot and stay onside. Nobody tackles you.</p></button>
+        <button class="card match" data-mode="match"><span class="pill">11 v 11</span><div class="icon">🏟️</div><h2>Match vs AI</h2><p>Pass, shoot, tackle and defend in a real match. Your coach explains every mistake.</p></button>
+        <button class="card online" data-mode="online"><span class="pill">MULTIPLAYER</span><div class="icon">🌐</div><h2>Online Match</h2><p>Make a room, share the code, and play with friends on laptops or iPads.</p></button>
+      </div>
+    </div>
+    <div class="menu-group"><div class="group-label">PRACTICE DRILLS</div>
+      <div class="modes">
+        <button class="card spacing" data-mode="spacing"><span class="pill">SPACING</span><div class="icon">🌍</div><h2>Shape Shift</h2><p>Spread, squeeze and slide with your team to keep perfect spacing.</p></button>
+        <button class="card attack" data-mode="attack"><span class="pill">OFFSIDE</span><div class="icon">🎯</div><h2>Striker Timing</h2><p>Hover on the last defender's shoulder and call for the pass at the perfect moment.</p></button>
+        <button class="card defend" data-mode="defend"><span class="pill">OFFSIDE</span><div class="icon">🛡️</div><h2>Defender Trap</h2><p>Move the back line as one. Step up to spring the offside trap — or drop and cover.</p></button>
+        <button class="card throwin" data-mode="throwin"><span class="pill">DECISIONS</span><div class="icon">🙌</div><h2>Throw-in Thinking</h2><p>Spot the free teammate fast, and learn the throw-in rules.</p></button>
+        <button class="card press" data-mode="press"><span class="pill">DEFENDING</span><div class="icon">🔥</div><h2>Press vs Drop</h2><p>They have the ball. Go win it, or slow him down? Read the cues.</p></button>
+        <button class="card corner" data-mode="corner"><span class="pill">TIMING</span><div class="icon">🚩</div><h2>Corner Attack</h2><p>Start deep, arrive late, attack the ball. Win the header.</p></button>
+      </div>
+    </div>
+    <div class="footer-row">
+      <span>Arrows / WASD or joystick to move · Space = pass · X = shoot · Z = camera · P = pause · M = mute</span>
+      <button class="btn ghost small muteBtn" title="Sound on/off">🔊</button>
+    </div>
+  </section>
+
+  <!-- AVATAR PICKER -->
+  <section id="avatar" class="screen">
+    <div class="lobby-wrap">
+      <h2 class="gradient-text">✏️ Your player</h2>
+      <div class="lobby-box" id="avatarUI"></div>
+      <button class="btn ghost" id="avBack">Back</button>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="screen">
+    <div class="lobby-wrap">
+      <h2 class="gradient-text">🌐 Online Match</h2>
+      <div id="lobbySetup" class="lobby-box">
+        <label>Your name <input id="lobbyName" maxlength="14" placeholder="e.g. Maya"></label>
+        <div class="lobby-actions"><button class="btn ghost small" id="lobbyAvatarBtn">✏️ Edit avatar</button></div>
+        <div class="lobby-actions">
+          <button class="btn big cyan" id="lobbyCreate">Create a room</button>
+          <span class="or">or join</span>
+          <input id="lobbyCodeIn" maxlength="4" placeholder="CODE" class="code-in">
+          <button class="btn" id="lobbyJoin">Join</button>
+        </div>
+      </div>
+      <div id="lobbyRoom" class="lobby-box" style="display:none">
+        <div class="code-row">Room code <b id="lobbyCode">----</b> <button class="btn ghost small" id="lobbyCopy">Copy link</button></div>
+        <a id="lobbyLink" class="link" href="#" target="_blank"></a>
+        <p class="hint">Friends open the link (or type the code). Everyone picks a spot. Empty spots are played by the AI.</p>
+        <div id="lobbyTeams" class="teams"></div>
+        <button class="btn big" id="lobbyStart" style="display:none">Start match ▶</button>
+      </div>
+      <div id="lobbyStatus" class="status"></div>
+      <button class="btn ghost" id="lobbyBack">Back to menu</button>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen">
+    <div id="stage">
+      <canvas id="pitch"></canvas>
+      <div class="hud top">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <div class="chip score" id="scoreChip"><span class="lbl">Score</span><span class="val" id="score">0</span></div>
+          <div class="chip timer" id="timerChip"><span class="lbl" id="timerLbl">Time</span><span class="val" id="timer">1:30</span></div>
+          <div class="chip combo" id="comboChip"><span class="lbl">Combo</span><span class="val" id="combo">x1</span></div>
+          <div class="scoreboard" id="scoreboard" style="display:none"><span class="tm blue">BLUE</span><span class="num" id="sbBlue">0</span><span class="dash">–</span><span class="num" id="sbRed">0</span><span class="tm red">RED</span><span class="clock" id="sbClock">4:00</span></div>
+        </div>
+        <div class="chip possession us" id="possChip"><span id="poss">WE have it — spread!</span></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost small camBtn" title="Camera (Z)">🏟️ Full</button>
+          <button class="btn ghost icon-btn muteBtn" title="Sound">🔊</button>
+          <button class="btn ghost icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
+          <button class="btn ghost small" id="menuBtn">Menu</button>
+        </div>
+      </div>
+      <div class="rule-panel" id="rulePanel" style="display:none">
+        <div class="rp-title" id="rpTitle">Are <span id="rwho">you</span> offside right now?</div>
+        <div class="rule-row" id="r1"><span class="mark">✗</span> In the other half?</div>
+        <div class="rule-row" id="r2"><span class="mark">✗</span> Ahead of the ball?</div>
+        <div class="rule-row" id="r3"><span class="mark">✗</span> Past the 2nd-last defender?</div>
+        <div class="rule-verdict good" id="rv">= ONSIDE ✓</div>
+        <div class="rp-note">All three ✓ when the ball is kicked = offside</div>
+      </div>
+      <div class="hud bottom">
+        <div class="coach"><div class="face">🧢</div><div class="bubble info" id="bubble"><span id="coachText">Coach is watching…</span></div></div>
+        <div class="controls-hint"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>Space</kbd> pass · <kbd>X</kbd> shoot<br>click / drag the field to run there</div>
+      </div>
+      <button class="btn big gold" id="passBtn">PASS! ⚽ <small style="font-size:14px;opacity:.7">(space)</small></button>
+      <div id="touchLayer"><div class="joy-base"></div><div class="joy-knob"></div><button class="tbtn pass" id="tPass">PASS</button><button class="tbtn shoot" id="tShoot">SHOOT</button></div>
+      <div id="verdict"><div class="word">ONSIDE</div><div class="why"></div></div>
+      <div class="toast" id="toast"></div>
+      <div id="choiceBar"></div>
+      <div class="overlay" id="halftime"></div>
+      <div id="explainCard"></div>
+      <div id="explainModal" class="overlay explain-overlay"></div>
+      <div class="overlay" id="tutorial"></div>
+      <div class="overlay" id="results"></div>
+      <div class="overlay" id="pause"><div class="modal"><h2>Paused ⏸</h2><p>Take a breather, champ.</p><div class="actions"><button class="btn ghost" id="quitBtn">Quit to menu</button><button class="btn big" id="resumeBtn">Resume ▶</button></div></div></div>
+    </div>
+  </section>
+
+</div>
+<script src="js/logic.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/avatar.js"></script>
+<script src="js/pitch.js"></script>
+<script src="js/explain.js"></script>
+<script src="js/touch.js"></script>
+<script src="js/net.js"></script>
+<script src="js/spacing.js"></script>
+<script src="js/offside.js"></script>
+<script src="js/match.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/report.js"></script>
+<script src="js/drills.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

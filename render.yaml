@@ -1,0 +1,11 @@
+# One-click deploy blueprint for Render.com (free tier works).
+services:
+  - type: web
+    name: pitch-perfect
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MATCH_SECONDS
+        value: "240"

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pitch Perfect — Avatar Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1020;--panel:rgba(16,24,52,.75);--line:rgba(255,255,255,.12);--text:#f4f7ff;--muted:#9fb0d8;--lime:#b6ff3b;--cyan:#38e8ff;--pink:#ff4fa3;--gold:#ffd23f}
+body{margin:0;font-family:Fredoka,'Baloo 2',Nunito,system-ui,sans-serif;background:linear-gradient(180deg,#0f1733,#070b1a);color:var(--text);padding:28px 20px 60px}
+h1{margin:0;font-size:40px;background:linear-gradient(92deg,var(--lime),var(--cyan) 50%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin:4px 0 22px}
+section{max-width:1080px;margin:0 auto 26px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:20px 22px}
+h2{margin:0 0 4px;font-size:22px}.hint{color:var(--muted);font-size:14px;margin:0 0 14px}
+canvas{display:block}.row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.fig{text-align:center;color:var(--muted);font-size:13px}.fig b{display:block;color:var(--text);font-size:14px;margin-top:4px}
+.seg{display:inline-flex;gap:6px;padding:5px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;margin:4px 8px 4px 0}
+.seg button{font:inherit;font-weight:700;font-size:14px;color:var(--muted);background:transparent;border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
+.seg button.on{background:#fff;color:#06101f}
+.sw{display:inline-flex;gap:6px;margin:4px 8px 4px 0;vertical-align:middle}.sw button{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw button.on{border-color:#fff;transform:scale(1.12)}
+.lbl{display:inline-block;min-width:90px;color:var(--muted);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.pick{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:center}
+@media(max-width:700px){.pick{grid-template-columns:1fr}}
+.pill{display:inline-block;background:var(--gold);color:#06101f;font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;margin-left:8px}
+ul{margin:8px 0 0 18px;color:var(--muted);line-height:1.5}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:700px){.compare{grid-template-columns:1fr}}
+.compare .fig{text-align:left}
+</style></head>
+<body>
+<h1>Avatar Mockup</h1>
+<p class="sub">Little "bobblehead" players instead of circles. Drawn with the same canvas code the game uses, so sizes are real.</p>
+
+<section>
+  <h2>1. Meet the avatars</h2>
+  <p class="hint">Big head, small body, seen from above and slightly in front. Hair + skin + jersey make each one different. The number stays on the shirt, the name under the feet.</p>
+  <div class="row" id="gallery"></div>
+</section>
+
+<section>
+  <h2>2. Pick yours <span class="pill">interactive</span></h2>
+  <p class="hint">This panel would appear once, before your first game (and in the lobby). Try it — the preview updates live.</p>
+  <div class="pick">
+    <canvas id="preview" width="260" height="260"></canvas>
+    <div>
+      <div><span class="lbl">Player</span><div class="seg" id="sexSeg"><button data-v="boy" class="on">👦 Boy</button><button data-v="girl">👧 Girl</button></div></div>
+      <div><span class="lbl">Skin</span><div class="sw" id="skinSw"></div></div>
+      <div><span class="lbl">Hair style</span><div class="seg" id="hairSeg"></div></div>
+      <div><span class="lbl">Hair color</span><div class="sw" id="hairSw"></div></div>
+      <div><span class="lbl">Extra</span><div class="seg" id="extraSeg"><button data-v="none" class="on">None</button><button data-v="band">Headband</button><button data-v="glasses">Glasses</button></div></div>
+      <div><span class="lbl">Jersey</span><div class="seg" id="teamSeg"><button data-v="blue" class="on">🔵 Blue</button><button data-v="red">🔴 Red</button><button data-v="gk">🧤 Keeper</button></div></div>
+      <p class="hint" style="margin-top:10px">Boy / Girl just picks the starting hair and face. Every hairstyle is available to both.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3. On the field, at real size <span class="pill">animated</span></h2>
+  <p class="hint">Left: today's circles. Right: avatars at the exact MacBook size (11 px radius) and iPad size (9 px). They face the way they run, legs pump, and YOU still gets the green halo.</p>
+  <div class="compare">
+    <div class="fig"><canvas id="fieldOld" width="500" height="300"></canvas><b>Now: circles</b></div>
+    <div class="fig"><canvas id="fieldNew" width="500" height="300"></canvas><b>Proposed: avatars (top row MacBook size, bottom row iPad size)</b></div>
+  </div>
+</section>
+
+<section>
+  <h2>4. Little animations</h2>
+  <p class="hint">Cheap to draw (a few arcs each), so 22 players stay smooth on a laptop and iPad.</p>
+  <div class="row" id="anims"></div>
+</section>
+
+<section>
+  <h2>5. How it would work in the game</h2>
+  <ul>
+    <li><b>You pick once.</b> Boy/Girl, skin, hair, color, extra. Saved on the device. Changeable from the menu (a little "Edit avatar" button next to your name).</li>
+    <li><b>Teammates and opponents</b> get random avatars with their jersey names, so the field looks like a real mixed team. Keepers get gloves.</li>
+    <li><b>Online:</b> your avatar travels with your name, so friends see your look on their screens.</li>
+    <li><b>Where it shows:</b> the match, First Game, Online, and every drill. Explainer mini-maps keep simple dots (clearer at that size).</li>
+    <li><b>Faces the way you run</b>, legs pump while moving, a quick kick pose on pass/shoot, arms-up jump on a goal.</li>
+    <li><b>Performance:</b> about 12 shapes per player. Same cost as the current circles plus text. No images to load.</li>
+  </ul>
+</section>
+
+<script>
+// ---------- the avatar renderer (prototype of what goes into pitch.js) ----------
+const SKIN = ['#ffe0bd','#f1c27d','#e0ac69','#c68642','#8d5524','#5a3a22'];
+const HAIR_COL = ['#2b1b0e','#5a3a22','#b5651d','#e8c36a','#111111','#d9534f','#7b4bd1'];
+const HAIR = ['short','spiky','curly','ponytail','braids','bun','long','buzz'];
+const TEAM = { blue:['#6fb3ff','#1f5fd6','#0c2f78'], red:['#ff8a8a','#e03434','#7a0f0f'], gk:['#ffe27a','#f0a500','#8a5a00'] };
+function drawAvatar(c, x, y, r, o) {
+  // o: {team, skin, hair, hairCol, extra, number, name, me, face(+1/-1), run(0..1 phase), pose:'idle'|'run'|'kick'|'jump', gk, hasBall}
+  const s = r / 20; // design unit
+  c.save(); c.translate(x, y);
+  const bob = o.pose === 'run' ? Math.sin(o.run * Math.PI * 2) * 1.2 * s : 0;
+  const jump = o.pose === 'jump' ? -10 * s : 0;
+  // shadow
+  c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(1 * s, 20 * s, 15 * s, 6 * s, 0, 0, Math.PI * 2); c.fill();
+  if (o.me) { const g = c.createRadialGradient(0, 4 * s, 10 * s, 0, 4 * s, 34 * s); g.addColorStop(0, 'rgba(182,255,59,.55)'); g.addColorStop(1, 'rgba(182,255,59,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 4 * s, 34 * s, 0, Math.PI * 2); c.fill(); }
+  if (o.hasBall) { c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.beginPath(); c.arc(0, 4 * s, 27 * s, 0, Math.PI * 2); c.stroke(); }
+  c.translate(0, jump);
+  if (o.face < 0) c.scale(-1, 1);
+  const col = TEAM[o.team] || TEAM.blue;
+  // legs (socks + boots)
+  const legSwing = o.pose === 'run' ? Math.sin(o.run * Math.PI * 2) * 5 * s : 0;
+  const kick = o.pose === 'kick' ? 7 * s : 0;
+  for (const side of [-1, 1]) {
+    const lx = side * 5 * s, ly = 15 * s + (side > 0 ? legSwing : -legSwing) + (side > 0 ? -kick * 0.4 : 0);
+    c.fillStyle = col[1]; c.fillRect(lx - 3 * s, 11 * s, 6 * s, 6 * s); // shorts
+    c.fillStyle = '#fff'; c.fillRect(lx - 2.6 * s, ly, 5.2 * s, 5 * s); // sock
+    c.fillStyle = '#222'; c.beginPath(); c.ellipse(lx + (side > 0 ? kick : 0), ly + 6 * s, 4 * s, 2.4 * s, 0, 0, Math.PI * 2); c.fill(); // boot
+  }
+  // body / jersey
+  const g = c.createLinearGradient(-12 * s, 0, 12 * s, 0); g.addColorStop(0, col[0]); g.addColorStop(0.55, col[1]); g.addColorStop(1, col[2]);
+  c.fillStyle = g; c.beginPath(); c.roundRect(-12 * s, -2 * s + bob, 24 * s, 16 * s, 7 * s); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1.2 * s; c.stroke();
+  // arms
+  const armSwing = o.pose === 'run' ? Math.sin(o.run * Math.PI * 2) * 4 * s : 0, up = o.pose === 'jump' ? -14 * s : 0;
+  for (const side of [-1, 1]) { const ax = side * 14 * s, ay = 6 * s + (side > 0 ? armSwing : -armSwing) + up + bob; c.fillStyle = o.team === 'gk' ? '#ffd23f' : SKIN[o.skin]; c.beginPath(); c.arc(ax, ay, (o.team === 'gk' ? 4.2 : 3.4) * s, 0, Math.PI * 2); c.fill(); if (o.team === 'gk') { c.strokeStyle = '#8a5a00'; c.lineWidth = 1; c.stroke(); } }
+  // number
+  c.fillStyle = '#fff'; c.font = `700 ${11 * s}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.save(); if (o.face < 0) c.scale(-1, 1); c.fillText(o.number, 0, 7 * s + bob); c.restore();
+  // head
+  const hy = -12 * s + bob; const hr = 11 * s;
+  if (o.hair === 'curly') { c.fillStyle = HAIR_COL[o.hairCol]; c.beginPath(); c.arc(0, hy - 1 * s, hr * 1.28, 0, Math.PI * 2); c.fill(); }
+  if (o.hair === 'long') { c.fillStyle = HAIR_COL[o.hairCol]; c.beginPath(); c.roundRect(-hr * 1.05, hy - 2 * s, hr * 2.1, hr * 1.45, 6 * s); c.fill(); }
+  if (o.hair === 'ponytail') { c.strokeStyle = HAIR_COL[o.hairCol]; c.lineWidth = 4.5 * s; c.lineCap = 'round'; c.beginPath(); c.moveTo(-hr * .7, hy - 2 * s); c.quadraticCurveTo(-hr * 1.6, hy + 2 * s, -hr * 1.2 + Math.sin((o.run || 0) * 6.28) * 2 * s, hy + 12 * s); c.stroke(); }
+  if (o.hair === 'braids') { c.strokeStyle = HAIR_COL[o.hairCol]; c.lineWidth = 3.4 * s; c.lineCap = 'round'; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * hr * .75, hy + 2 * s); c.lineTo(sd * hr * .95, hy + 13 * s); c.stroke(); c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(sd * hr * .95, hy + 13 * s, 1.6 * s, 0, 6.28); c.fill(); } }
+  c.fillStyle = SKIN[o.skin]; c.beginPath(); c.arc(0, hy, hr, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 1; c.stroke();
+  // hair cap
+  c.fillStyle = HAIR_COL[o.hairCol];
+  if (o.hair === 'short' || o.hair === 'ponytail' || o.hair === 'long' || o.hair === 'braids' || o.hair === 'bun') { c.beginPath(); c.arc(0, hy, hr * 1.02, Math.PI * 1.05, Math.PI * 1.95); c.quadraticCurveTo(0, hy - hr * .35, -hr * 1.0, hy - hr * .2); c.fill(); }
+  if (o.hair === 'buzz') { c.globalAlpha = .55; c.beginPath(); c.arc(0, hy, hr * 1.0, Math.PI * 1.08, Math.PI * 1.92); c.closePath(); c.fill(); c.globalAlpha = 1; }
+  if (o.hair === 'spiky') { c.beginPath(); c.moveTo(-hr, hy - hr * .2); for (let i = 0; i < 6; i++) { const t = -1 + i * .4; c.lineTo((t + .2) * hr, hy - hr * 1.45); c.lineTo((t + .4) * hr, hy - hr * .75); } c.lineTo(hr, hy - hr * .2); c.closePath(); c.fill(); }
+  if (o.hair === 'curly') { c.beginPath(); c.arc(0, hy, hr * 1.04, Math.PI * 1.05, Math.PI * 1.95); c.closePath(); c.fill(); }
+  if (o.hair === 'bun') { c.beginPath(); c.arc(0, hy - hr * 1.15, hr * .42, 0, Math.PI * 2); c.fill(); }
+  if (o.extra === 'band') { c.fillStyle = o.team === 'red' ? '#38e8ff' : '#ff4fa3'; c.fillRect(-hr, hy - hr * .55, hr * 2, 3 * s); }
+  // face
+  c.fillStyle = '#1b1b2a'; for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(sd * 3.8 * s, hy + 1 * s, 1.5 * s, 2 * s, 0, 0, Math.PI * 2); c.fill(); }
+  if (o.lashes) { c.strokeStyle = '#1b1b2a'; c.lineWidth = 1 * s; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * 2.4 * s, hy - 1.6 * s); c.lineTo(sd * 5.6 * s, hy - 2.4 * s); c.stroke(); } }
+  c.strokeStyle = '#8a3a2a'; c.lineWidth = 1.2 * s; c.beginPath(); c.arc(0, hy + 3 * s, 3 * s, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+  c.fillStyle = 'rgba(255,120,120,.35)'; for (const sd of [-1, 1]) { c.beginPath(); c.arc(sd * 6.5 * s, hy + 3.5 * s, 1.8 * s, 0, 6.28); c.fill(); }
+  if (o.extra === 'glasses') { c.strokeStyle = '#222'; c.lineWidth = 1.2 * s; for (const sd of [-1, 1]) { c.beginPath(); c.arc(sd * 3.8 * s, hy + 1 * s, 3.2 * s, 0, 6.28); c.stroke(); } c.beginPath(); c.moveTo(-0.6 * s, hy + 1 * s); c.lineTo(0.6 * s, hy + 1 * s); c.stroke(); }
+  c.restore();
+  if (o.name) { c.font = `600 ${Math.max(9, 10 * s)}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'top'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.55)'; c.fillStyle = o.me ? '#b6ff3b' : 'rgba(255,255,255,.92)'; c.strokeText(o.name, x, y + 23 * s); c.fillText(o.name, x, y + 23 * s); }
+  if (o.me) { c.font = `700 ${12 * s}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.6)'; c.fillStyle = '#b6ff3b'; c.strokeText('YOU', x, y - 28 * s); c.fillText('YOU', x, y - 28 * s); }
+}
+function grass(c, w, h) { c.fillStyle = '#1d6b35'; c.fillRect(0, 0, w, h); for (let i = 0; i < 10; i++) { c.fillStyle = i % 2 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.05)'; c.fillRect(i * w / 10, 0, w / 10 + 1, h); } c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 2; c.beginPath(); c.moveTo(w / 2, 0); c.lineTo(w / 2, h); c.stroke(); c.beginPath(); c.arc(w / 2, h / 2, 60, 0, 6.28); c.stroke(); }
+
+// ---------- 1. gallery ----------
+const G = [
+  { team: 'blue', skin: 1, hair: 'short', hairCol: 0, number: 10, name: 'Leo', face: 1 },
+  { team: 'blue', skin: 0, hair: 'ponytail', hairCol: 3, number: 7, name: 'Maya', face: 1, me: true, lashes: true },
+  { team: 'red', skin: 4, hair: 'curly', hairCol: 0, number: 9, name: 'Kai', face: -1 },
+  { team: 'red', skin: 3, hair: 'braids', hairCol: 0, number: 4, name: 'Zoe', face: -1, lashes: true },
+  { team: 'gk', skin: 2, hair: 'buzz', hairCol: 1, number: 1, name: 'Eli', face: 1 },
+  { team: 'blue', skin: 5, hair: 'bun', hairCol: 4, number: 6, name: 'Nia', face: 1, lashes: true, extra: 'band' },
+  { team: 'red', skin: 0, hair: 'spiky', hairCol: 5, number: 11, name: 'Max', face: -1, extra: 'glasses' },
+  { team: 'blue', skin: 2, hair: 'long', hairCol: 2, number: 8, name: 'Ava', face: 1, lashes: true },
+];
+const gal = document.getElementById('gallery');
+G.forEach(o => { const d = document.createElement('div'); d.className = 'fig'; const cv = document.createElement('canvas'); cv.width = 120; cv.height = 165; d.appendChild(cv); const b = document.createElement('b'); b.textContent = `${o.name} · ${o.hair}${o.extra ? ' + ' + o.extra : ''}${o.team === 'gk' ? ' (keeper)' : ''}`; d.appendChild(b); gal.appendChild(d); const c = cv.getContext('2d'); grass(c, 120, 165); drawAvatar(c, 60, 86, 40, { ...o, pose: 'idle', run: 0 }); });
+
+// ---------- 2. picker ----------
+const pick = { sex: 'boy', skin: 1, hair: 'short', hairCol: 0, extra: 'none', team: 'blue' };
+const pv = document.getElementById('preview').getContext('2d');
+function renderPreview() { grass(pv, 260, 260); drawAvatar(pv, 130, 138, 66, { ...pick, number: 10, name: pick.sex === 'girl' ? 'Maya' : 'Leo', me: true, face: 1, pose: 'idle', lashes: pick.sex === 'girl' }); }
+const mkSw = (id, cols, key) => { const el = document.getElementById(id); cols.forEach((col, i) => { const b = document.createElement('button'); b.style.background = col; if (pick[key] === i) b.classList.add('on'); b.onclick = () => { pick[key] = i; [...el.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); renderPreview(); }; el.appendChild(b); }); };
+mkSw('skinSw', SKIN, 'skin'); mkSw('hairSw', HAIR_COL, 'hairCol');
+const hairSeg = document.getElementById('hairSeg'); HAIR.forEach(h => { const b = document.createElement('button'); b.textContent = h; b.dataset.v = h; if (h === pick.hair) b.classList.add('on'); hairSeg.appendChild(b); });
+const segs = { sexSeg: 'sex', hairSeg: 'hair', extraSeg: 'extra', teamSeg: 'team' };
+for (const [id, key] of Object.entries(segs)) { const el = document.getElementById(id); el.querySelectorAll('button').forEach(b => b.onclick = () => { pick[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); if (key === 'sex') { pick.hair = b.dataset.v === 'girl' ? 'ponytail' : 'short'; hairSeg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === pick.hair)); } renderPreview(); }); }
+renderPreview();
+
+// ---------- 3. field comparison ----------
+const oldC = document.getElementById('fieldOld').getContext('2d'), newC = document.getElementById('fieldNew').getContext('2d');
+const CAST = [
+  { team: 'blue', skin: 1, hair: 'short', hairCol: 0, number: 10, name: 'Leo' }, { team: 'blue', skin: 0, hair: 'ponytail', hairCol: 3, number: 7, name: 'You', me: true, lashes: true }, { team: 'blue', skin: 4, hair: 'curly', hairCol: 0, number: 9, name: 'Kai' }, { team: 'gk', skin: 2, hair: 'buzz', hairCol: 1, number: 1, name: 'Eli' },
+  { team: 'red', skin: 3, hair: 'braids', hairCol: 0, number: 4, name: 'Zoe', lashes: true }, { team: 'red', skin: 0, hair: 'spiky', hairCol: 5, number: 11, name: 'Max', extra: 'glasses' }, { team: 'red', skin: 5, hair: 'bun', hairCol: 4, number: 6, name: 'Nia', lashes: true },
+];
+function drawCircle(c, x, y, r, o) { const col = TEAM[o.team]; c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(x + r * .25, y + r * .55, r * 1.05, r * .5, 0, 0, 6.28); c.fill(); if (o.me) { const g = c.createRadialGradient(x, y, r, x, y, r * 2.6); g.addColorStop(0, 'rgba(182,255,59,.55)'); g.addColorStop(1, 'rgba(182,255,59,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 2.6, 0, 6.28); c.fill(); } const g = c.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r); g.addColorStop(0, col[0]); g.addColorStop(.7, col[1]); g.addColorStop(1, col[2]); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 6.28); c.fill(); c.lineWidth = 1.8; c.strokeStyle = o.me ? '#b6ff3b' : 'rgba(255,255,255,.85)'; c.stroke(); c.fillStyle = '#fff'; c.font = `700 ${r * 1.05}px Fredoka`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(o.number, x, y + r * .05); c.font = `600 9px Fredoka`; c.textBaseline = 'top'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.55)'; c.fillStyle = o.me ? '#b6ff3b' : 'rgba(255,255,255,.9)'; c.strokeText(o.name, x, y + r * 1.15); c.fillText(o.name, x, y + r * 1.15); if (o.me) { c.font = '700 10px Fredoka'; c.textBaseline = 'bottom'; c.strokeText('YOU', x, y - r * 1.5); c.fillText('YOU', x, y - r * 1.5); } }
+function ball(c, x, y) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, 6, 0, 6.28); c.fill(); c.strokeStyle = '#222'; c.lineWidth = 1; c.stroke(); c.fillStyle = '#222'; for (let i = 0; i < 5; i++) { c.beginPath(); c.arc(x + Math.cos(i * 1.26) * 3, y + Math.sin(i * 1.26) * 3, 1.3, 0, 6.28); c.fill(); } }
+let t0 = performance.now();
+function frame(now) {
+  const t = (now - t0) / 1000;
+  for (const [c, mode] of [[oldC, 'old'], [newC, 'new']]) {
+    grass(c, 500, 300);
+    [[11, 80], [9, 215]].forEach(([r, baseY], rowi) => {
+      c.fillStyle = 'rgba(255,255,255,.6)'; c.font = '600 12px Fredoka'; c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText(rowi ? 'iPad size (r = 9 px)' : 'MacBook size (r = 11 px)', 10, baseY - 62);
+      CAST.forEach((o, i) => { const x = 50 + i * 66 + Math.sin(t * 1.3 + i) * 10, y = baseY + Math.cos(t * 1.1 + i * 2) * 10; const face = Math.cos(t * 1.3 + i) >= 0 ? 1 : -1; if (mode === 'old') drawCircle(c, x, y, r, o); else drawAvatar(c, x, y, r, { ...o, face, pose: 'run', run: (t * 2.2 + i * .3) % 1, hasBall: i === 1 }); });
+      ball(c, 50 + 66 + Math.sin(t * 1.3 + 1) * 10 + (mode === 'old' ? 12 : 10), baseY + Math.cos(t * 1.1 + 2) * 10 + 4);
+    });
+  }
+  // animations row
+  ANIM.forEach((a, i) => { const c = a.ctx; grass(c, 120, 165); const ph = (t * 2.2) % 1; drawAvatar(c, 60, 86, 40, { team: 'blue', skin: 1, hair: i % 2 ? 'ponytail' : 'short', hairCol: i % 2 ? 3 : 0, lashes: !!(i % 2), number: 7, face: 1, pose: a.pose, run: ph, hasBall: a.pose === 'kick' }); if (a.pose === 'kick') ball(c, 92 + ph * 20, 126 - Math.sin(ph * Math.PI) * 20); });
+  requestAnimationFrame(frame);
+}
+const ANIM = [{ pose: 'idle', label: 'Idle: tiny breathing bob' }, { pose: 'run', label: 'Run: legs + arms pump, ponytail swings' }, { pose: 'kick', label: 'Kick: leg out on pass / shoot' }, { pose: 'jump', label: 'Goal: arms up jump' }];
+const animRow = document.getElementById('anims'); ANIM.forEach(a => { const d = document.createElement('div'); d.className = 'fig'; const cv = document.createElement('canvas'); cv.width = 120; cv.height = 165; d.appendChild(cv); const b = document.createElement('b'); b.textContent = a.label; d.appendChild(b); animRow.appendChild(d); a.ctx = cv.getContext('2d'); });
+requestAnimationFrame(frame);
+</script>
+</body></html>

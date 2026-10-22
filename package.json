@@ -1,0 +1,15 @@
+{
+  "name": "pitch-perfect",
+  "version": "2.0.0",
+  "description": "Pitch Perfect - a kids' soccer game about spacing, possession and the offside rule. Solo vs AI or online multiplayer.",
+  "private": true,
+  "main": "server/server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node tests/logic.test.js && node tests/sim.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
