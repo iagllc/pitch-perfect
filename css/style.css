@@ -333,3 +333,66 @@ html[data-theme="teen"] .modal-x { border-radius: 8px; }
 html[data-theme="teen"] .stars .s.lit { filter: drop-shadow(0 0 8px rgba(255,200,61,.6)); }
 html[data-theme="teen"] .av-grid canvas { border-radius: 8px; }
 html[data-theme="teen"] .controls-hint kbd { border-radius: 4px; }
+
+/* ================= Kids theme: sticker style, chunkier, bouncier, brighter ================= */
+html[data-theme="kid"] {
+  --bg: #0b1230; --bg2: #16205a; --panel: rgba(22, 30, 76, .78); --line: rgba(255,255,255,.16); --text: #ffffff; --muted: #b7c3ef;
+  --lime: #b6ff3b; --cyan: #3ee9ff; --pink: #ff5db1; --gold: #ffd43b; --blue: #4c9bff; --red: #ff5a5a;
+  --radius: 26px; --shadow: 0 16px 40px rgba(0,0,0,.4);
+  --font: 'Fredoka', 'Baloo 2', 'Nunito', system-ui, sans-serif; --display: 'Baloo 2', 'Fredoka', sans-serif;
+}
+html[data-theme="kid"] body::before {
+  background:
+    radial-gradient(60% 50% at 18% 8%, rgba(76,155,255,.35), transparent 60%),
+    radial-gradient(50% 40% at 85% 12%, rgba(255,93,177,.3), transparent 60%),
+    radial-gradient(70% 60% at 50% 110%, rgba(182,255,59,.22), transparent 60%),
+    linear-gradient(180deg, var(--bg2), var(--bg));
+}
+html[data-theme="kid"] body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .35;
+  background-image: radial-gradient(rgba(255,255,255,.18) 1.5px, transparent 2px), radial-gradient(rgba(255,255,255,.12) 1.5px, transparent 2px); background-size: 42px 42px, 42px 42px; background-position: 0 0, 21px 21px; }
+html[data-theme="kid"] h1.title { font-family: var(--display); font-weight: 800; transform: rotate(-2deg); letter-spacing: 0; background: linear-gradient(92deg, var(--lime), var(--cyan) 45%, var(--pink)); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 6px 0 rgba(0,0,0,.35)) drop-shadow(0 10px 24px rgba(62,233,255,.25)); }
+html[data-theme="kid"] .logo .ball { font-size: 80px; animation: spin 7s linear infinite, bounce 1.6s ease-in-out infinite; }
+@keyframes bounce { 0%, 100% { transform: translateY(0) rotate(0deg) } 50% { transform: translateY(-14px) rotate(180deg) } }
+html[data-theme="kid"] .tagline { font-weight: 600; color: #e6ecff; }
+html[data-theme="kid"] .group-label { color: var(--gold); font-size: 13px; }
+html[data-theme="kid"] .card { border: 3px solid rgba(255,255,255,.22); border-radius: 26px; background: linear-gradient(180deg, rgba(40,52,120,.85), rgba(22,30,76,.9)); box-shadow: 0 8px 0 rgba(0,0,0,.25), var(--shadow); }
+html[data-theme="kid"] .card:hover, html[data-theme="kid"] .card:focus-visible { transform: translateY(-6px) rotate(-1.2deg) scale(1.03); border-color: var(--accent, var(--cyan)); box-shadow: 0 10px 0 rgba(0,0,0,.25), 0 0 0 4px rgba(255,255,255,.12), var(--shadow); }
+html[data-theme="kid"] .card .icon { font-size: 50px; display: inline-block; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+html[data-theme="kid"] .card:hover .icon { transform: rotate(-12deg) scale(1.18); }
+html[data-theme="kid"] .card h2 { font-family: var(--display); font-weight: 800; font-size: 26px; }
+html[data-theme="kid"] .pill { border: 2px solid #fff; box-shadow: 0 3px 0 rgba(0,0,0,.25); transform: rotate(3deg); }
+html[data-theme="kid"] .btn { border: 3px solid rgba(255,255,255,.85); font-family: var(--display); font-weight: 800; box-shadow: 0 7px 0 rgba(0,0,0,.28); }
+html[data-theme="kid"] .btn.ghost { border-color: rgba(255,255,255,.35); box-shadow: 0 4px 0 rgba(0,0,0,.2); }
+html[data-theme="kid"] .btn:hover { transform: translateY(-3px) rotate(-1deg) scale(1.05); }
+html[data-theme="kid"] .btn.big { font-size: 28px; }
+html[data-theme="kid"] .seg { border: 2px solid rgba(255,255,255,.2); } html[data-theme="kid"] .seg button.on { background: var(--gold); color: #06101f; }
+html[data-theme="kid"] .picker button { border-width: 3px; } html[data-theme="kid"] .picker button.on { background: var(--gold); color: #06101f; border-color: #fff; }
+html[data-theme="kid"] .chip, html[data-theme="kid"] .scoreboard, html[data-theme="kid"] .me-row { border: 2px solid rgba(255,255,255,.25); box-shadow: 0 5px 0 rgba(0,0,0,.25); }
+html[data-theme="kid"] .chip.score { border-color: var(--lime); } html[data-theme="kid"] .chip.timer { border-color: var(--cyan); } html[data-theme="kid"] .chip.combo { border-color: var(--gold); }
+html[data-theme="kid"] .scoreboard .num { font-family: var(--display); font-weight: 800; font-size: 26px; }
+html[data-theme="kid"] .coach .face { animation: capbob 2.2s ease-in-out infinite; }
+@keyframes capbob { 0%, 100% { transform: rotate(-6deg) translateY(0) } 50% { transform: rotate(6deg) translateY(-4px) } }
+html[data-theme="kid"] .bubble { border: 3px solid #fff; border-radius: 22px 22px 22px 4px; font-size: 17px; box-shadow: 0 6px 0 rgba(0,0,0,.25), var(--shadow); }
+html[data-theme="kid"] .bubble::after { content: ''; position: absolute; left: -12px; bottom: 6px; border: 8px solid transparent; border-right-color: #fff; border-bottom-color: #fff; }
+html[data-theme="kid"] .bubble.good { background: #eaffd0; } html[data-theme="kid"] .bubble.bad { background: #ffe3e3; } html[data-theme="kid"] .bubble.info { background: #e3f8ff; }
+html[data-theme="kid"] .modal { border: 3px solid rgba(255,255,255,.25); border-radius: 30px; box-shadow: 0 10px 0 rgba(0,0,0,.25), var(--shadow); }
+html[data-theme="kid"] .modal h2.gradient, html[data-theme="kid"] .gradient-text { font-family: var(--display); font-weight: 800; }
+html[data-theme="kid"] .rule { border: 2px solid rgba(255,255,255,.14); border-radius: 18px; } html[data-theme="kid"] .rule .em { font-size: 34px; }
+html[data-theme="kid"] .explain { border: 3px solid rgba(255,255,255,.3); border-radius: 26px; box-shadow: 0 8px 0 rgba(0,0,0,.25), var(--shadow); }
+html[data-theme="kid"] .ex-kicker { color: var(--gold); } html[data-theme="kid"] .ex-lesson { border: 2px solid var(--gold); }
+html[data-theme="kid"] .feedback { border: 3px solid var(--gold); }
+html[data-theme="kid"] .stars { font-size: 62px; }
+html[data-theme="kid"] .bigscore { font-family: var(--display); font-weight: 800; font-size: 80px; }
+html[data-theme="kid"] .rule-panel { border: 2px solid rgba(255,255,255,.22); border-radius: 22px; box-shadow: 0 5px 0 rgba(0,0,0,.25), var(--shadow); }
+html[data-theme="kid"] .rule-row.yes .mark { animation: bump .3s; }
+html[data-theme="kid"] .tbtn { border: 4px solid #fff; box-shadow: 0 8px 0 rgba(0,0,0,.3); font-family: var(--display); font-weight: 800; font-size: 20px; }
+html[data-theme="kid"] #verdict .word { font-family: var(--display); font-weight: 800; -webkit-text-stroke: 2px rgba(0,0,0,.35); }
+html[data-theme="kid"] #verdict .why { border: 3px solid var(--gold); }
+html[data-theme="kid"] #choiceBar .prompt { border: 3px solid var(--gold); }
+html[data-theme="kid"] .toast { border: 2px solid var(--gold); }
+html[data-theme="kid"] .slot { border-radius: 14px; border-width: 2px; } html[data-theme="kid"] .slot.mine { background: rgba(255,212,59,.18); border-color: var(--gold); }
+html[data-theme="kid"] .code-row b { color: var(--gold); border: 2px dashed rgba(255,255,255,.35); }
+html[data-theme="kid"] .lobby-box, html[data-theme="kid"] .stat, html[data-theme="kid"] .lessons { border: 2px solid rgba(255,255,255,.16); }
+html[data-theme="kid"] .modal-x { border: 2px solid rgba(255,255,255,.35); }
+html[data-theme="kid"] .av-grid canvas { border: 3px solid rgba(255,255,255,.3); }
+@media (prefers-reduced-motion: reduce) { html[data-theme="kid"] .logo .ball, html[data-theme="kid"] .coach .face { animation: none; } }

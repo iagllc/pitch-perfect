@@ -43,10 +43,11 @@
       const s = this.scale, P = (x, y) => this.toPx(x, y);
       // grass (the Teen+ theme plays under cooler, darker lights)
       const teen = document.documentElement.dataset.theme === 'teen';
-      c.fillStyle = teen ? '#185a2d' : '#1d6b35'; c.fillRect(0, 0, this.cssW, this.cssH);
+      const kid = document.documentElement.dataset.theme === 'kid';
+      c.fillStyle = teen ? '#185a2d' : kid ? '#20803e' : '#1d6b35'; c.fillRect(0, 0, this.cssW, this.cssH);
       const stripes = 14, sw = F.w / stripes;
       for (let i = -1; i <= stripes; i++) {
-        c.fillStyle = teen ? (i % 2 ? '#1a6231' : '#15532a') : (i % 2 ? '#1f7a3c' : '#1a6a32');
+        c.fillStyle = teen ? (i % 2 ? '#1a6231' : '#15532a') : kid ? (i % 2 ? '#26923f' : '#1f7f38') : (i % 2 ? '#1f7a3c' : '#1a6a32');
         const [x0] = P(i * sw, 0); c.fillRect(x0, 0, sw * s + 1, this.cssH);
       }
       // outer margin darker
@@ -62,7 +63,7 @@
         const lx = fx * this.cssW, ly = fy * this.cssH, lg = c.createRadialGradient(lx, ly, 0, lx, ly, Math.max(this.cssW, this.cssH) * 0.55);
         lg.addColorStop(0, 'rgba(255,255,230,.22)'); lg.addColorStop(0.35, 'rgba(255,255,230,.06)'); lg.addColorStop(1, 'rgba(255,255,230,0)'); c.fillStyle = lg; c.fillRect(0, 0, this.cssW, this.cssH);
       }
-      const vg = c.createRadialGradient(this.cssW / 2, this.cssH / 2, this.cssH * 0.35, this.cssW / 2, this.cssH / 2, this.cssW * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.35)'); c.fillStyle = vg; c.fillRect(0, 0, this.cssW, this.cssH);
+      const vg = c.createRadialGradient(this.cssW / 2, this.cssH / 2, this.cssH * 0.35, this.cssW / 2, this.cssH / 2, this.cssW * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, kid ? 'rgba(0,0,0,.22)' : 'rgba(0,0,0,.35)'); c.fillStyle = vg; c.fillRect(0, 0, this.cssW, this.cssH);
       // lines
       c.strokeStyle = 'rgba(255,255,255,.92)'; c.lineWidth = Math.max(1.5, 0.14 * s); c.lineJoin = 'round';
       const rect = (x, y, w, h) => { const [a, b] = P(x, y); c.strokeRect(a, b, w * s, h * s); };
