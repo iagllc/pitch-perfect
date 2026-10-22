@@ -396,3 +396,42 @@ html[data-theme="kid"] .lobby-box, html[data-theme="kid"] .stat, html[data-theme
 html[data-theme="kid"] .modal-x { border: 2px solid rgba(255,255,255,.35); }
 html[data-theme="kid"] .av-grid canvas { border: 3px solid rgba(255,255,255,.3); }
 @media (prefers-reduced-motion: reduce) { html[data-theme="kid"] .logo .ball, html[data-theme="kid"] .coach .face { animation: none; } }
+
+/* ================= Phones (and small tablets): compact HUD, buttons off the field ================= */
+@media (max-width: 950px), (max-height: 520px) {
+  html[data-theme] #stage { padding: 4px; } html[data-theme] canvas#pitch { border-radius: 8px; }
+  html[data-theme] .hud.top { padding: 6px 8px; gap: 6px; } html[data-theme] .hud.top > div { gap: 6px !important; }
+  html[data-theme] .chip { padding: 4px 9px; gap: 5px; } html[data-theme] .chip .val { font-size: 15px; } html[data-theme] .chip .lbl { font-size: 9px; }
+  html[data-theme] .scoreboard { padding: 3px 10px; gap: 6px; } html[data-theme] .scoreboard .num { font-size: 18px; } html[data-theme] .scoreboard .clock { font-size: 14px; margin-left: 4px; } html[data-theme] .scoreboard .tm { font-size: 10px; }
+  html[data-theme] .camBtn { font-size: 0 !important; width: 38px; height: 38px; padding: 0 !important; display: inline-grid; place-items: center; letter-spacing: 0 !important; }
+  html[data-theme] .camBtn::before { content: '🎥'; font-size: 17px; }
+  html[data-theme] #menuBtn { font-size: 12px; padding: 6px 10px; } html[data-theme] .btn.icon-btn { width: 36px; height: 36px; font-size: 15px; }
+  html[data-theme] #possChip { display: none !important; }
+  html[data-theme] .hud.bottom { padding: 6px 8px; }
+  html[data-theme] .coach { max-width: 58vw; gap: 6px; } html[data-theme] .coach .face { font-size: 22px; } html[data-theme] .bubble { font-size: 12px; line-height: 1.25; padding: 6px 10px; border-radius: 12px 12px 12px 4px; }
+  html[data-theme="kid"] .bubble { border-width: 2px; } html[data-theme="teen"] .coach .face::before { font-size: 10px; letter-spacing: 2px; }
+  html[data-theme] .tbtn { width: 62px; height: 62px; font-size: 13px; bottom: 66px; border-width: 3px; } html[data-theme] .tbtn.pass { right: 80px; } html[data-theme] .tbtn.shoot { right: 10px; bottom: 104px; }
+  html[data-theme] .joy-base { width: 96px; height: 96px; } html[data-theme] .joy-knob { width: 42px; height: 42px; }
+  html[data-theme] .rule-panel { width: 168px; font-size: 11px; top: 50px; right: 6px; padding: 8px 9px; } html[data-theme] .rp-title { font-size: 12px; margin-bottom: 5px; } html[data-theme] .rule-row { padding: 3px 6px; margin-bottom: 3px; } html[data-theme] .rule-row .mark { width: 16px; height: 16px; font-size: 10px; } html[data-theme] .rule-verdict { font-size: 12px; padding: 5px; margin-top: 5px; } html[data-theme] .rp-note { display: none; }
+  html[data-theme] #explainCard { width: 270px; bottom: 56px; right: 6px; } html[data-theme] .explain canvas { max-height: 120px; object-fit: cover; } html[data-theme] .ex-body { padding: 10px 12px 12px; } html[data-theme] .ex-body h3 { font-size: 16px; } html[data-theme] .ex-body p { font-size: 12px; } html[data-theme] .ex-lesson { font-size: 12px; padding: 6px 10px; }
+  html[data-theme] .overlay { padding: 8px; } html[data-theme] .modal { padding: 16px; max-height: 96vh; overflow: auto; border-radius: 18px; } html[data-theme] .modal h2 { font-size: 24px; } html[data-theme] .modal p { font-size: 14px; }
+  html[data-theme] .rules { gap: 8px; margin: 10px 0 4px; } html[data-theme] .rule { padding: 8px 10px; gap: 10px; } html[data-theme] .rule .em { font-size: 22px; } html[data-theme] .rule b { font-size: 14px; } html[data-theme] .rule span { font-size: 12px; }
+  html[data-theme] .diagrams { grid-template-columns: repeat(3, 1fr); gap: 6px; } html[data-theme] .diagrams span { font-size: 11px; }
+  html[data-theme] .picker button { padding: 7px 10px; font-size: 12px; } html[data-theme] .seg button { padding: 6px 10px; font-size: 12px; }
+  html[data-theme] .modal .actions { margin-top: 12px; } html[data-theme] .btn.big { font-size: 20px; padding: 14px 28px; }
+  html[data-theme] .stats { gap: 6px; } html[data-theme] .stat { padding: 8px; } html[data-theme] .stat .v { font-size: 20px; } html[data-theme] .stars { font-size: 40px; } html[data-theme] .bigscore { font-size: 54px; }
+  html[data-theme] #verdict { top: 10%; } html[data-theme] #verdict .why { font-size: 12px; max-width: 84vw; padding: 7px 12px; }
+  html[data-theme] #choiceBar { bottom: 74px; } html[data-theme] #choiceBar .btn.big { font-size: 15px; padding: 10px 16px; } html[data-theme] #choiceBar .prompt { font-size: 13px; padding: 6px 12px; }
+  html[data-theme] #passBtn { display: none !important; }
+  html[data-theme] .toast { top: 54px; font-size: 13px; }
+  html[data-theme] #menu { padding-top: 12px; gap: 12px; } html[data-theme] .logo .ball { font-size: 48px; } html[data-theme] h1.title { font-size: 44px; } html[data-theme] .tagline { font-size: 14px; } html[data-theme] .card { padding: 14px; } html[data-theme] .card .icon { font-size: 32px; margin-bottom: 4px; } html[data-theme] .card h2 { font-size: 20px; } html[data-theme] .card p { font-size: 13px; }
+  html[data-theme] .me-row { padding: 4px 10px 4px 6px; gap: 8px; } html[data-theme] .me-row canvas { width: 40px; height: 50px; }
+  html[data-theme] .lobby-box { padding: 14px; } html[data-theme] .code-row b { font-size: 30px; letter-spacing: 5px; } html[data-theme] .slot { padding: 6px 10px; font-size: 13px; }
+}
+  @media (orientation: portrait) { html[data-theme] .hud.bottom { bottom: auto; top: 50px; align-items: flex-start; } html[data-theme] .coach { max-width: 90vw; } html[data-theme] #explainCard { bottom: auto; top: 110px; } }
+/* ---------- rotate prompt (phones in portrait while playing) ---------- */
+#rotate { position: fixed; inset: 0; z-index: 60; display: none; place-items: center; background: rgba(5,8,20,.94); text-align: center; padding: 24px; }
+#rotate.show { display: grid; }
+#rotate .phone { font-size: 64px; display: inline-block; animation: rotatePhone 1.6s ease-in-out infinite; }
+@keyframes rotatePhone { 0%, 20% { transform: rotate(0) } 60%, 100% { transform: rotate(-90deg) } }
+#rotate h2 { margin: 12px 0 6px; font-size: 26px; } #rotate p { color: var(--muted); margin: 0 0 18px; }

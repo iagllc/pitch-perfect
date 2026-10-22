@@ -86,7 +86,7 @@
     updateCamera(dt) {
       const P = this.app.pitch, v = this.view, follow = this.app.settings.camera === 'follow';
       if (!follow) { if (P.cam) P.setCamera(null); return; }
-      const me = v.players[this.myIdx], zoom = Touch.enabled ? 1.7 : 1.9;
+      const me = v.players[this.myIdx], small = Math.min(window.innerWidth, window.innerHeight) < 520, zoom = small ? 2.4 : Touch.enabled ? 1.7 : 1.9;
       const tx = v.ball.x * 0.6 + me.x * 0.4, ty = v.ball.y * 0.6 + me.y * 0.4;
       if (!this.camPos) this.camPos = { x: tx, y: ty };
       const k = Math.min(1, dt * 3.5); this.camPos.x += (tx - this.camPos.x) * k; this.camPos.y += (ty - this.camPos.y) * k;

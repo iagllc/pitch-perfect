@@ -71,6 +71,15 @@ Lessons are collected on the full-time screen.
 After a match or drill, press **📄 Report card**. It opens a page you can print, save, or share:
 result, stats, what the coach noticed (with pictures), and 3 things to practice.
 
+## Playing on an iPad or phone
+
+Open the game link in Safari or Chrome. No app to install. For a home-screen icon, use Share → Add to Home Screen.
+
+- **Move:** touch and drag anywhere on the **left half** of the screen. A joystick appears under your finger.
+- **Pass / Shoot:** the two round buttons at the bottom right.
+- **Phones:** turn the phone sideways (landscape). The game asks you to. The camera follows the ball automatically on small screens; tap the 🎥 button to switch to the full field.
+- **Drills:** tap the on-screen choices, or tap a player when the drill asks you to pick one.
+
 ## Controls
 
 - Move: arrows / WASD, click or drag the field, or the touch joystick (left side of the screen on iPad)

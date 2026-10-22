@@ -19,6 +19,10 @@
   };
   applyAvatar();
   const save = () => { try { localStorage.setItem('pp-settings', JSON.stringify(settings)); } catch (e) {} };
+  const isPhone = () => Math.min(window.innerWidth, window.innerHeight) < 520 || Math.max(window.innerWidth, window.innerHeight) < 1000;
+  if (isPhone() && !settings.cameraChosen) settings.camera = 'follow'; // small screens: follow the ball unless the player chose otherwise
+  let rotateSkipped = false;
+  function updateRotate() { const inGame = document.getElementById('game').classList.contains('active') && window.__app && window.__app.running; const portrait = window.innerHeight > window.innerWidth && window.innerWidth < 700; document.getElementById('rotate').classList.toggle('show', inGame && portrait && !rotateSkipped); }
 
   const TUTORIALS = {
     guide: { title: 'First Game', icon: '🎓', color: 'lime', intro: 'A 60-second guided game. The ball waits for you, the coach talks you through it, nobody tackles.',
@@ -41,7 +45,7 @@
 
   const app = {
     pitch: null, fx: new FX(), sfx: window.SFX, mode: null, modeKey: null, running: false, paused: false, net: null, settings,
-    toggleCamera() { settings.camera = settings.camera === 'follow' ? 'full' : 'follow'; save(); renderCamera(); this.toast(settings.camera === 'follow' ? 'Camera: follow the ball 🔍' : 'Camera: full field'); },
+    toggleCamera() { settings.camera = settings.camera === 'follow' ? 'full' : 'follow'; settings.cameraChosen = true; save(); renderCamera(); this.toast(settings.camera === 'follow' ? 'Camera: follow the ball 🔍' : 'Camera: full field'); },
     setScore(n) { if (el.score.textContent !== String(n)) el.score.textContent = n; },
     setTimer(s) { const v = Math.max(0, Math.ceil(s)); el.timerLbl.textContent = 'Time'; el.timer.textContent = `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; el.timerChip.classList.toggle('hurry', v <= 10 && v > 0); },
     setTimerText(t) { el.timerLbl.textContent = 'Round'; el.timer.textContent = t.replace('Round ', ''); el.timerChip.classList.remove('hurry'); },
@@ -55,7 +59,7 @@
     hideVerdict() { el.verdict.className = ''; },
     showPass(b) { el.passBtn.classList.toggle('show', !!b && !Touch.enabled); },
     toast(t) { el.toast.textContent = t; el.toast.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => el.toast.classList.remove('show'), 1600); },
-    finish(r) { this.running = false; Touch.enable(false); this.lastReport = r.report || null; showResults(r); },
+    finish(r) { this.running = false; Touch.enable(false); this.lastReport = r.report || null; showResults(r); updateRotate(); },
     choices(list, cb, prompt) { const bar = $('#choiceBar'); bar.innerHTML = `${prompt ? `<div class="prompt">${prompt}</div>` : ''}<div class="btns">${list.map((c, i) => `<button class="btn big ${i % 2 ? 'pink' : 'cyan'}" data-i="${i}">${c.label}</button>`).join('')}</div>`; bar.classList.add('show'); bar.querySelectorAll('button').forEach(b => b.onclick = () => { this.sfx.pop(); cb(list[+b.dataset.i].key); }); },
     hideChoices() { const bar = $('#choiceBar'); bar.classList.remove('show'); bar.innerHTML = ''; },
     halftime(score, st, team, report) {
@@ -92,7 +96,7 @@
         <div><span class="lbl">Extra</span>${seg('avExtra', a.set === 'teen' ? [['none', 'None'], ['band', 'Headband'], ['tape', 'Wrist tape'], ['captain', 'Captain band']] : [['none', 'None'], ['band', 'Headband'], ['glasses', 'Glasses']], a.extra)}</div>
         <div><span class="lbl">Camera</span>${seg('avCam', [['full', 'Full field'], ['follow', '🔍 Follow the ball']], settings.camera)}</div>
         <div class="actions" style="justify-content:flex-start"><button class="btn big" id="avSave">Save ✓</button><button class="btn ghost" id="avRandom">🎲 Surprise me</button></div></div></div>`;
-      const bind = (id, key, isNum) => { const box = $('#' + id); if (!box) return; box.querySelectorAll('button').forEach(b => b.onclick = () => { const v = isNum ? +b.dataset.v : b.dataset.v; if (key === 'camera') { settings.camera = v; save(); } else { a[key] = v; if (key === 'sex') { a.lashes = v === 'f'; a.hair = a.set === 'teen' ? (v === 'f' ? 'ponytail' : 'fade') : (v === 'f' ? 'ponytail' : 'short'); if (v === 'f') a.beard = 'none'; } } app.sfx.pop(); render(); }); };
+      const bind = (id, key, isNum) => { const box = $('#' + id); if (!box) return; box.querySelectorAll('button').forEach(b => b.onclick = () => { const v = isNum ? +b.dataset.v : b.dataset.v; if (key === 'camera') { settings.camera = v; settings.cameraChosen = true; save(); } else { a[key] = v; if (key === 'sex') { a.lashes = v === 'f'; a.hair = a.set === 'teen' ? (v === 'f' ? 'ponytail' : 'fade') : (v === 'f' ? 'ponytail' : 'short'); if (v === 'f') a.beard = 'none'; } } app.sfx.pop(); render(); }); };
       bind('avSet', 'set'); bind('avSex', 'sex'); bind('avBuild', 'build'); bind('avSkin', 'skin', true); bind('avHair', 'hair'); bind('avHairC', 'hairCol', true); bind('avBeard', 'beard'); bind('avExtra', 'extra'); bind('avCam', 'camera');
       $('#avRandom').onclick = () => { Object.assign(a, Avatars.randomAvatar(a.set)); app.sfx.pop(); render(); };
       $('#avSave').onclick = () => { settings.avatar = Object.assign({}, a); save(); applyAvatar(); Avatars.reset(); app.sfx.good(); renderMenuAvatar(); if (avReturn === 'lobby') { show(el.lobby); if (app.net) app.net.send({ t: 'avatar', avatar: settings.avatar }); } else show(el.menu); };
@@ -117,7 +121,7 @@
   function renderCamera() { document.querySelectorAll('.camBtn').forEach(b => { b.textContent = settings.camera === 'follow' ? '🎥 Camera: follow ball' : '🎥 Camera: full field'; b.title = 'Switch camera (Z key)'; }); }
 
   // ---------- screens ----------
-  function show(screen) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); screen.classList.add('active'); }
+  function show(screen) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); screen.classList.add('active'); updateRotate(); }
   function rolePicker(id, cur, roles) { return `<div class="picker" id="${id}">${(roles || ROLES).map(r => `<button data-role="${r[0]}" class="${cur === r[0] ? 'on' : ''}">${r[1]}</button>`).join('')}</div>`; }
   function openTutorial(key) {
     if (!settings.avatar) { pendingKey = key; avReturn = 'menu'; openAvatar('menu'); const btnWait = setInterval(() => { if (settings.avatar) { clearInterval(btnWait); openTutorial(pendingKey); } }, 300); return; }
@@ -161,7 +165,7 @@
     else if (key === 'guide') { app.mode = new MatchClient(app); app.mode.start({ mode: 'guide', team: 0, role: ['ST', 'CM', 'LW', 'RW', 'LCM', 'RCM'].includes(settings.role) ? settings.role : 'ST', name: settings.name || 'You', avatar: window.__myAvatar }); }
     else if (Drills[key]) { app.mode = new Drills[key](app); app.mode.start(); }
     else if (key === 'online') { app.mode = new MatchClient(app); app.mode.start({ mode: 'net', ...netOpts }); }
-    app.modeKey = key; show(el.game); app.pitch.resize(); app.running = true; app.paused = false; last = performance.now();
+    app.modeKey = key; show(el.game); app.pitch.resize(); app.running = true; app.paused = false; last = performance.now(); updateRotate();
   }
   function showResults(r) {
     el.results.innerHTML = `<div class="modal"><button class="modal-x" id="resX" aria-label="Close">✕</button>
@@ -254,7 +258,8 @@
     $('#lobbyCreate').onclick = () => joinRoom(null); lob.join.onclick = () => joinRoom(lob.codeIn.value.trim().toUpperCase());
     lob.start.onclick = () => app.net && app.net.send({ t: 'start' });
     $('#lobbyBack').onclick = leaveToMenu; $('#lobbyCopy').onclick = () => { try { navigator.clipboard.writeText(lob.link.href); app.toast('Link copied!'); } catch (e) {} };
-    window.addEventListener('resize', () => app.pitch && app.pitch.resize());
+    window.addEventListener('resize', () => { app.pitch && app.pitch.resize(); updateRotate(); }); window.addEventListener('orientationchange', () => setTimeout(() => { app.pitch && app.pitch.resize(); updateRotate(); }, 300));
+    $('#rotateSkip').onclick = () => { rotateSkipped = true; updateRotate(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden && app.running && !app.paused) togglePause(); });
   }
   function toggleMute() { app.sfx.toggle(); renderMute(); }
