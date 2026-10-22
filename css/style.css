@@ -267,3 +267,69 @@ canvas#pitch { display: block; border-radius: 18px; box-shadow: 0 30px 80px rgba
 .modal-x:hover { background: rgba(255,255,255,.22); transform: scale(1.08); }
 .explain .modal-x { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.3); }
 .explain .ex-body .btn { align-self: flex-end; }
+
+/* ================= Teen+ theme: condensed type, squared corners, cooler palette, no bounce ================= */
+html[data-theme="teen"] {
+  --bg: #07090f; --bg2: #0d1220; --panel: rgba(14, 18, 30, .86); --line: rgba(255,255,255,.1); --text: #eef1f6; --muted: #8a93a8;
+  --lime: #d9ff3d; --cyan: #5cd6ff; --pink: #ff4d5a; --gold: #ffc83d; --blue: #3a7bff; --red: #ff3b3b;
+  --radius: 14px; --shadow: 0 14px 40px rgba(0,0,0,.55);
+  --font: 'Barlow', 'Avenir Next', 'Helvetica Neue', system-ui, sans-serif; --display: 'Barlow Condensed', 'Barlow', 'Arial Narrow', sans-serif;
+}
+html[data-theme="teen"] body::before { background: radial-gradient(60% 45% at 50% -10%, rgba(58,123,255,.22), transparent 60%), radial-gradient(40% 30% at 90% 100%, rgba(217,255,61,.08), transparent 60%), linear-gradient(180deg, var(--bg2), var(--bg)); animation: none; }
+html[data-theme="teen"] .logo, html[data-theme="teen"] .logo .ball { animation: none; }
+html[data-theme="teen"] .logo .ball { font-size: 34px; filter: none; opacity: .9; }
+html[data-theme="teen"] h1.title { font-family: var(--display); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; background: linear-gradient(92deg, #fff, #fff 58%, var(--lime)); -webkit-background-clip: text; background-clip: text; filter: none; }
+html[data-theme="teen"] .tagline { text-transform: uppercase; letter-spacing: 2px; font-size: 13px; font-weight: 600; }
+html[data-theme="teen"] .group-label { color: var(--lime); }
+html[data-theme="teen"] .gradient-text, html[data-theme="teen"] .modal h2.gradient, html[data-theme="teen"] .modal h2 { font-family: var(--display); text-transform: uppercase; letter-spacing: 1.5px; background: linear-gradient(92deg, #fff, #fff 60%, var(--lime)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme="teen"] .card { border-radius: 12px; background: #0f1424; border-color: rgba(255,255,255,.08); backdrop-filter: none; text-align: left; }
+html[data-theme="teen"] .card::after { background: linear-gradient(180deg, rgba(255,255,255,.04), transparent 50%); }
+html[data-theme="teen"] .card:hover, html[data-theme="teen"] .card:focus-visible { transform: translateY(-3px); box-shadow: var(--shadow), inset 0 0 0 1px var(--accent, var(--cyan)); border-color: var(--accent, var(--cyan)); }
+html[data-theme="teen"] .card:active { transform: translateY(0); }
+html[data-theme="teen"] .card .icon { font-size: 26px; margin-bottom: 12px; opacity: .9; }
+html[data-theme="teen"] .card h2 { font-family: var(--display); text-transform: uppercase; letter-spacing: 1px; font-size: 24px; }
+html[data-theme="teen"] .card p { font-size: 14px; }
+html[data-theme="teen"] .pill { border-radius: 4px; letter-spacing: 1.5px; font-size: 11px; }
+html[data-theme="teen"] .btn { border-radius: 10px; box-shadow: 0 2px 0 rgba(0,0,0,.35); font-family: var(--display); text-transform: uppercase; letter-spacing: 1.2px; font-size: 18px; }
+html[data-theme="teen"] .btn.big { font-size: 24px; padding: 16px 36px; }
+html[data-theme="teen"] .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+html[data-theme="teen"] .btn:active { transform: translateY(1px); box-shadow: none; }
+html[data-theme="teen"] .btn.ghost { box-shadow: none; }
+html[data-theme="teen"] .btn.pink { color: #fff; }
+html[data-theme="teen"] .seg { border-radius: 10px; } html[data-theme="teen"] .seg button { border-radius: 7px; font-family: var(--display); text-transform: uppercase; letter-spacing: 1px; font-size: 14px; }
+html[data-theme="teen"] .seg button.on { background: var(--lime); color: #06101f; transform: none; }
+html[data-theme="teen"] .picker button { border-radius: 8px; font-family: var(--display); text-transform: uppercase; letter-spacing: 1px; }
+html[data-theme="teen"] .picker button.on { background: var(--lime); color: #06101f; border-color: var(--lime); transform: none; }
+html[data-theme="teen"] .chip, html[data-theme="teen"] .scoreboard, html[data-theme="teen"] .me-row, html[data-theme="teen"] .toast { border-radius: 10px; backdrop-filter: none; background: rgba(10, 13, 22, .9); }
+html[data-theme="teen"] .chip .val, html[data-theme="teen"] .scoreboard .num, html[data-theme="teen"] .scoreboard .clock, html[data-theme="teen"] .bigscore, html[data-theme="teen"] .stat .v, html[data-theme="teen"] .htscore { font-family: var(--display); letter-spacing: 1px; }
+html[data-theme="teen"] .bump { animation: none; }
+html[data-theme="teen"] .coach .face { font-size: 0; width: auto; display: flex; align-items: flex-end; filter: none; }
+html[data-theme="teen"] .coach .face::before { content: 'COACH'; font: 700 12px var(--display); letter-spacing: 3px; color: var(--lime); writing-mode: vertical-rl; transform: rotate(180deg); padding: 6px 0; }
+html[data-theme="teen"] .bubble { background: rgba(10, 13, 22, .92); color: var(--text); border-radius: 8px; border-left: 4px solid var(--cyan); font-weight: 600; font-size: 15px; }
+html[data-theme="teen"] .bubble.flash { animation: none; }
+html[data-theme="teen"] .bubble.good { background: rgba(10, 13, 22, .92); border-left-color: var(--lime); }
+html[data-theme="teen"] .bubble.bad { background: rgba(10, 13, 22, .92); border-left-color: var(--red); }
+html[data-theme="teen"] .bubble.info { background: rgba(10, 13, 22, .92); border-left-color: var(--cyan); }
+html[data-theme="teen"] .modal { border-radius: 16px; background: #0f1424; animation: none; }
+html[data-theme="teen"] .rule { border-radius: 10px; animation: none; } html[data-theme="teen"] .rule .em { font-size: 22px; }
+html[data-theme="teen"] .explain { border-radius: 14px; background: #0f1424; animation: none; }
+html[data-theme="teen"] .ex-kicker { color: var(--lime); }
+html[data-theme="teen"] .ex-lesson { background: rgba(217,255,61,.1); color: var(--text); border: 1px solid rgba(217,255,61,.35); border-radius: 8px; }
+html[data-theme="teen"] .feedback { background: rgba(255,255,255,.05); color: var(--text); border-left: 4px solid var(--lime); border-radius: 8px; }
+html[data-theme="teen"] .feedback .face { font-size: 26px; }
+html[data-theme="teen"] .rule-panel { border-radius: 12px; backdrop-filter: none; background: rgba(10, 13, 22, .92); }
+html[data-theme="teen"] .rule-row { border-radius: 6px; } html[data-theme="teen"] .rule-verdict { border-radius: 8px; font-family: var(--display); letter-spacing: 1px; }
+html[data-theme="teen"] .tbtn { border-radius: 16px; font-family: var(--display); letter-spacing: 1.5px; border-width: 2px; }
+html[data-theme="teen"] .tbtn.shoot { background: var(--red); }
+html[data-theme="teen"] #verdict .word { font-family: var(--display); letter-spacing: 3px; }
+html[data-theme="teen"] #verdict .why { background: rgba(10, 13, 22, .92); color: var(--text); border-radius: 8px; border-left: 4px solid var(--lime); }
+html[data-theme="teen"] #verdict.show { animation: none; }
+html[data-theme="teen"] #choiceBar .prompt { background: rgba(10, 13, 22, .92); color: var(--text); border-radius: 8px; border-left: 4px solid var(--lime); }
+html[data-theme="teen"] #passBtn.show { animation: none; }
+html[data-theme="teen"] .lobby-box, html[data-theme="teen"] .stat, html[data-theme="teen"] .lessons, html[data-theme="teen"] .team-col { border-radius: 12px; backdrop-filter: none; }
+html[data-theme="teen"] .slot { border-radius: 8px; } html[data-theme="teen"] .slot.mine { border-color: var(--lime); background: rgba(217,255,61,.1); }
+html[data-theme="teen"] .code-row b { color: var(--lime); border-radius: 8px; font-family: var(--display); }
+html[data-theme="teen"] .modal-x { border-radius: 8px; }
+html[data-theme="teen"] .stars .s.lit { filter: drop-shadow(0 0 8px rgba(255,200,61,.6)); }
+html[data-theme="teen"] .av-grid canvas { border-radius: 8px; }
+html[data-theme="teen"] .controls-hint kbd { border-radius: 4px; }

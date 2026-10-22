@@ -11,7 +11,12 @@
   const ROLES = [['GK', 'Keeper 🧤'], ['LB', 'Left Back'], ['LCB', 'Center Back (L)'], ['RCB', 'Center Back (R)'], ['RB', 'Right Back'], ['LCM', 'Left Mid'], ['CM', 'Center Mid'], ['RCM', 'Right Mid'], ['LW', 'Left Wing'], ['ST', 'Striker ⚽'], ['RW', 'Right Wing']];
   const settings = { role: 'CM', difficulty: 'rookie', team: 0, name: '', avatar: null, camera: 'full' };
   try { Object.assign(settings, JSON.parse(localStorage.getItem('pp-settings') || '{}')); } catch (e) {}
-  const applyAvatar = () => { window.__myAvatar = settings.avatar || Avatars.defaultAvatar('kid', 'm'); window.__avatarSet = window.__myAvatar.set; };
+  const applyAvatar = () => {
+    window.__myAvatar = settings.avatar || Avatars.defaultAvatar('kid', 'm'); window.__avatarSet = window.__myAvatar.set;
+    const teen = window.__avatarSet === 'teen'; document.documentElement.dataset.theme = teen ? 'teen' : 'kid';
+    const ps = document.getElementById('pauseSub'); if (ps) ps.textContent = teen ? 'Game paused.' : 'Take a breather, champ.';
+    if (window.__app && window.__app.pitch) window.__app.pitch.cacheKey = '';
+  };
   applyAvatar();
   const save = () => { try { localStorage.setItem('pp-settings', JSON.stringify(settings)); } catch (e) {} };
 

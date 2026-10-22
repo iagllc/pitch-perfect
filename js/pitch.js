@@ -31,7 +31,7 @@
 
     // ---- static field (cached) ----
     buildCache() {
-      const key = `${this.canvas.width}x${this.canvas.height}|${this.view.x},${this.view.y},${this.view.w},${this.view.h}`;
+      const key = `${this.canvas.width}x${this.canvas.height}|${this.view.x},${this.view.y},${this.view.w},${this.view.h}|${document.documentElement.dataset.theme}`;
       if (this.cacheKey === key) return;
       this.cacheKey = key;
       const off = document.createElement('canvas'); off.width = this.canvas.width; off.height = this.canvas.height;
@@ -41,11 +41,12 @@
     }
     renderField(c) {
       const s = this.scale, P = (x, y) => this.toPx(x, y);
-      // grass
-      c.fillStyle = '#1d6b35'; c.fillRect(0, 0, this.cssW, this.cssH);
+      // grass (the Teen+ theme plays under cooler, darker lights)
+      const teen = document.documentElement.dataset.theme === 'teen';
+      c.fillStyle = teen ? '#185a2d' : '#1d6b35'; c.fillRect(0, 0, this.cssW, this.cssH);
       const stripes = 14, sw = F.w / stripes;
       for (let i = -1; i <= stripes; i++) {
-        c.fillStyle = i % 2 ? '#1f7a3c' : '#1a6a32';
+        c.fillStyle = teen ? (i % 2 ? '#1a6231' : '#15532a') : (i % 2 ? '#1f7a3c' : '#1a6a32');
         const [x0] = P(i * sw, 0); c.fillRect(x0, 0, sw * s + 1, this.cssH);
       }
       // outer margin darker
@@ -86,7 +87,7 @@
       }
     }
     buildZoomCache() { // the whole field rendered once at the zoomed scale (device-pixel-ratio 1), then cropped per frame
-      const zoom = this.cam.zoom, key = `${this.cssW}x${this.cssH}|${zoom}`; if (this.zoomKey === key) return;
+      const zoom = this.cam.zoom, key = `${this.cssW}x${this.cssH}|${zoom}|${document.documentElement.dataset.theme}`; if (this.zoomKey === key) return;
       this.zoomKey = key; const W = Math.round(this.cssW * zoom), H = Math.round(this.cssH * zoom);
       const off = document.createElement('canvas'); off.width = W; off.height = H; const c = off.getContext('2d');
       const saved = { cam: this.cam, scale: this.scale, cssW: this.cssW, cssH: this.cssH, dpr: this.dpr };
