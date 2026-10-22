@@ -260,3 +260,10 @@ canvas#pitch { display: block; border-radius: 18px; box-shadow: 0 30px 80px rgba
 .lbl { display: inline-block; min-width: 90px; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .sw { display: inline-flex; gap: 6px; margin: 4px 8px 4px 0; vertical-align: middle; flex-wrap: wrap; } .sw button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; } .sw button.on { border-color: #fff; transform: scale(1.12); }
 .seg { flex-wrap: wrap; }
+
+/* ---------- v4.1: close buttons ---------- */
+.modal, .explain { position: relative; }
+.modal-x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,.1); color: var(--text); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; display: grid; place-items: center; z-index: 2; transition: background .15s, transform .15s; }
+.modal-x:hover { background: rgba(255,255,255,.22); transform: scale(1.08); }
+.explain .modal-x { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.3); }
+.explain .ex-body .btn { align-self: flex-end; }

@@ -16,13 +16,13 @@
     render(ex) {
       this.current = ex; const card = document.getElementById('explainCard'), ov = document.getElementById('explainModal');
       const host = ex.blocking ? ov : card;
-      host.innerHTML = `<div class="explain ${ex.blocking ? 'big' : ''}">
+      host.innerHTML = `<div class="explain ${ex.blocking ? 'big' : ''}"><button class="modal-x" aria-label="Close">✕</button>
         <canvas class="ex-canvas" width="${ex.blocking ? 520 : 320}" height="${ex.blocking ? 300 : 190}"></canvas>
         <div class="ex-body"><div class="ex-kicker">What went wrong?</div><h3>${ex.title}</h3><p>${ex.text}</p>
         ${ex.lesson ? `<div class="ex-lesson">💡 ${ex.lesson}</div>` : ''}
         <button class="btn ${ex.blocking ? 'big' : 'small'}">${ex.blocking ? 'Got it ▶' : 'Got it'}</button></div></div>`;
       const cv = host.querySelector('canvas'); if (ex.snap) this.drawSnap(cv, ex.snap); else cv.style.display = 'none';
-      host.querySelector('button').onclick = () => this.hide();
+      host.querySelectorAll('button').forEach(b => b.onclick = () => this.hide());
       host.classList.add('show'); if (ex.blocking) { this.paused = true; this.onPause && this.onPause(); }
       else { clearTimeout(this.timer); this.timer = setTimeout(() => this.hide(), 9000); }
       try { window.SFX && window.SFX.pop(); } catch (e) {}

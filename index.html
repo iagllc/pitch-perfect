@@ -26,7 +26,7 @@
       <canvas id="menuAvatar" width="80" height="100"></canvas>
       <div class="me-info"><b id="menuAvatarName">Your player</b><span id="menuAvatarSet">Kids set</span></div>
       <button class="btn cyan small" id="menuAvatarBtn">✏️ Edit avatar</button>
-      <button class="btn ghost small camBtn">🏟️ Full</button>
+      <button class="btn ghost small camBtn">🎥 Camera: full field</button>
     </div>
 
     <div class="menu-group"><div class="group-label">PLAY A MATCH</div>
@@ -100,7 +100,7 @@
         </div>
         <div class="chip possession us" id="possChip"><span id="poss">WE have it — spread!</span></div>
         <div style="display:flex;gap:8px">
-          <button class="btn ghost small camBtn" title="Camera (Z)">🏟️ Full</button>
+          <button class="btn ghost small camBtn" title="Switch camera (Z key)">🎥 Camera: full field</button>
           <button class="btn ghost icon-btn muteBtn" title="Sound">🔊</button>
           <button class="btn ghost icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
           <button class="btn ghost small" id="menuBtn">Menu</button>
@@ -128,7 +128,7 @@
       <div id="explainModal" class="overlay explain-overlay"></div>
       <div class="overlay" id="tutorial"></div>
       <div class="overlay" id="results"></div>
-      <div class="overlay" id="pause"><div class="modal"><h2>Paused ⏸</h2><p>Take a breather, champ.</p><div class="actions"><button class="btn ghost" id="quitBtn">Quit to menu</button><button class="btn big" id="resumeBtn">Resume ▶</button></div></div></div>
+      <div class="overlay" id="pause"><div class="modal"><button class="modal-x" id="pauseX" aria-label="Close">✕</button><h2>Paused ⏸</h2><p>Take a breather, champ.</p><div class="actions"><button class="btn ghost" id="quitBtn">Quit to menu</button><button class="btn big" id="resumeBtn">Resume ▶</button></div></div></div>
     </div>
   </section>
 

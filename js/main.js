@@ -55,13 +55,13 @@
     hideChoices() { const bar = $('#choiceBar'); bar.classList.remove('show'); bar.innerHTML = ''; },
     halftime(score, st, team, report) {
       const ov = $('#halftime'), mine = team === 0 ? 'Blue' : 'Red', bar = (a, b, la, lb) => `<div class="hbar"><span class="l">${la}</span><div class="track"><div class="b" style="width:${a}%"></div><div class="r" style="width:${b}%"></div></div><span class="r">${lb}</span></div>`;
-      ov.innerHTML = `<div class="modal"><h2 class="gradient">HALFTIME</h2><div class="htscore"><span class="blue">BLUE</span> ${score[0]} – ${score[1]} <span class="red">RED</span></div>
+      ov.innerHTML = `<div class="modal"><button class="modal-x" id="htX" aria-label="Close">✕</button><h2 class="gradient">HALFTIME</h2><div class="htscore"><span class="blue">BLUE</span> ${score[0]} – ${score[1]} <span class="red">RED</span></div>
         ${bar(st.poss[0], st.poss[1], st.poss[0] + '%', st.poss[1] + '%')}<div class="hlabel">possession</div>
         ${bar(st.shots[0] * 10, st.shots[1] * 10, st.shots[0], st.shots[1])}<div class="hlabel">shots</div>
         ${bar(st.passes[0], st.passes[1], st.passes[0], st.passes[1])}<div class="hlabel">passes</div>
         ${report ? `<div class="feedback"><div class="face">🧢</div><div>You (${mine}): ${report.shape}% in position so far, ${report.passes} passes, ${report.shots} shots. ${report.shape >= 60 ? 'Great shape — keep it up!' : 'Second half: stay in your ring more.'}</div></div>` : ''}
         <p>Teams switch ends. Second half starts in a moment…</p><div class="actions"><button class="btn ghost" id="htClose">OK</button></div></div>`;
-      ov.classList.add('active'); $('#htClose').onclick = () => this.hideHalftime();
+      ov.classList.add('active'); $('#htClose').onclick = $('#htX').onclick = () => this.hideHalftime();
     },
     hideHalftime() { $('#halftime').classList.remove('active'); },
   };
@@ -109,7 +109,7 @@
     const A = Avatars.anim('__preview', x, y, performance.now(), { hasBall: false }); Avatars.draw(c, x, y, 11, previewAvatar, 'us', A, { me: true, hasBall: false, number: 10 });
   }
   function renderMenuAvatar() { const cv = $('#menuAvatar'); if (!cv) return; const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); const a = window.__myAvatar; Avatars.drawPortrait(c, 40, a.set === 'teen' ? 92 : 62, a.set === 'teen' ? 80 : 90, a, 'us', { number: 10 }); $('#menuAvatarName').textContent = settings.name ? settings.name : 'Your player'; $('#menuAvatarSet').textContent = a.set === 'teen' ? 'Teen+ set' : 'Kids set'; renderCamera(); }
-  function renderCamera() { document.querySelectorAll('.camBtn').forEach(b => { b.textContent = settings.camera === 'follow' ? '🔍 Follow' : '🏟️ Full'; b.title = 'Camera (Z)'; }); }
+  function renderCamera() { document.querySelectorAll('.camBtn').forEach(b => { b.textContent = settings.camera === 'follow' ? '🎥 Camera: follow ball' : '🎥 Camera: full field'; b.title = 'Switch camera (Z key)'; }); }
 
   // ---------- screens ----------
   function show(screen) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); screen.classList.add('active'); }
@@ -119,7 +119,7 @@
     app.sfx.unlock(); app.sfx.pop();
     const t = TUTORIALS[key]; app.modeKey = key;
     const drillRoles = ROLES.filter(r => r[0] !== 'GK');
-    el.tutorial.innerHTML = `<div class="modal wide">
+    el.tutorial.innerHTML = `<div class="modal wide"><button class="modal-x" id="tutX" aria-label="Close">✕</button>
       <div style="font-size:54px">${t.icon}</div>
       <h2 class="gradient">${t.title}</h2><p>${t.intro}</p>
       <div class="rules">${t.rules.map(r => `<div class="rule"><div class="em">${r[0]}</div><div><b>${r[1]}</b><span>${r[2]}</span></div></div>`).join('')}</div>
@@ -136,7 +136,7 @@
     el.tutorial.querySelectorAll('#rolePick button').forEach(b => b.onclick = () => { settings.role = b.dataset.role; save(); el.tutorial.querySelectorAll('#rolePick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     el.tutorial.querySelectorAll('#diffPick button').forEach(b => b.onclick = () => { settings.difficulty = b.dataset.d; save(); el.tutorial.querySelectorAll('#diffPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     el.tutorial.querySelectorAll('#teamPick button').forEach(b => b.onclick = () => { settings.team = +b.dataset.t; save(); el.tutorial.querySelectorAll('#teamPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
-    $('#tutBack').onclick = () => { el.tutorial.classList.remove('active'); show(el.menu); };
+    $('#tutBack').onclick = $('#tutX').onclick = () => { el.tutorial.classList.remove('active'); show(el.menu); };
     $('#tutPlay').onclick = () => { el.tutorial.classList.remove('active'); startGame(key); };
   }
   function drawOffsideDiagrams() {
@@ -159,7 +159,7 @@
     app.modeKey = key; show(el.game); app.pitch.resize(); app.running = true; app.paused = false; last = performance.now();
   }
   function showResults(r) {
-    el.results.innerHTML = `<div class="modal">
+    el.results.innerHTML = `<div class="modal"><button class="modal-x" id="resX" aria-label="Close">✕</button>
       <h2 class="gradient">${r.title}</h2>
       <div class="stars">${[0, 1, 2].map(i => `<span class="s" data-i="${i}">⭐</span>`).join('')}</div>
       <div class="bigscore">${r.score}</div><p>points</p>
@@ -172,7 +172,7 @@
     r.stars > 0 && app.fx.confetti(Logic.FIELD.halfway, 20, 120);
     el.results.querySelectorAll('.s').forEach((s, i) => { if (i < r.stars) setTimeout(() => { s.classList.add('lit'); app.sfx.good(); }, 400 + i * 350); });
     if (r.stars === 3) setTimeout(() => app.sfx.goal(), 1500);
-    $('#resMenu').onclick = () => { el.results.classList.remove('active'); leaveToMenu(); };
+    $('#resMenu').onclick = $('#resX').onclick = () => { el.results.classList.remove('active'); leaveToMenu(); };
     $('#resAgain').onclick = () => { el.results.classList.remove('active'); if (r.next) { settings.role = settings.role === 'GK' ? 'ST' : settings.role; startGame(r.next); return; } if (app.modeKey === 'online') { app.mode = null; show(el.lobby); } else startGame(app.modeKey); };
     if (r.report) { r.report.name = r.report.name && r.report.name !== 'You' ? r.report.name : (settings.name || 'Player'); r.report.stars = r.stars; $('#resReport').onclick = () => { app.sfx.pop(); Report.open(r.report); }; }
   }
@@ -239,7 +239,7 @@
     });
     window.addEventListener('keyup', e => { if (e.code === 'Space' && el.game.classList.contains('active')) e.preventDefault(); if (keyish.has(e.code) && app.mode) app.mode.onKey(e.code, false); });
     el.passBtn.onclick = () => { if (app.mode && app.mode.requestPass) app.mode.requestPass(); };
-    $('#pauseBtn').onclick = togglePause; $('#resumeBtn').onclick = togglePause;
+    $('#pauseBtn').onclick = togglePause; $('#resumeBtn').onclick = togglePause; $('#pauseX').onclick = togglePause;
     $('#quitBtn').onclick = () => { leaveToMenu(); };
     $('#menuBtn').onclick = () => { if (app.running && !confirm('Quit this game?')) return; leaveToMenu(); };
     document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => b.dataset.mode === 'online' ? openOnline() : openTutorial(b.dataset.mode));
