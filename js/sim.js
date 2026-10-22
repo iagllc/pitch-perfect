@@ -290,7 +290,8 @@
         this.flagCheckCrowding(dt); return;
       }
       // free ball physics
-      if (b.inFlight) b.inFlight.t = (b.inFlight.t || 0) + dt;
+      if (b.inFlight) { const f = b.inFlight; f.t = (f.t || 0) + dt;
+        if (f.kind === 'pass' && f.receiver >= 0) { const r = this.players[f.receiver]; const d = dist(r, b); const toward = d > 0.01 ? (r.vx * (b.x - r.x) + r.vy * (b.y - r.y)) / d : 0; if (f.minD === undefined || d < f.minD) f.minD = d; f.chase = Math.max(f.chase || 0, toward); } }
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (b.z > 0 || b.vz > 0) { b.z += b.vz * dt; b.vz -= GRAVITY * dt; if (b.z <= 0) { b.z = 0; b.vz = b.vz < -3 ? -b.vz * 0.35 : 0; } }
       const sp = Math.hypot(b.vx, b.vy); if (sp > 0) { const air = b.z > 0.2; const ns = Math.max(0, sp - (air ? 0 : DECEL * dt)) * (1 - DRAG * dt); b.vx *= ns / sp; b.vy *= ns / sp; }
@@ -299,7 +300,8 @@
       // pickups
       let best = null, bd = 99;
       const fast = Math.hypot(b.vx, b.vy) > 14;
-      for (const p of this.players) { if (p.kickCool > 0) continue; const r = p.role === 'GK' ? (fast ? 0.95 : 1.6) : (fast ? 0.65 : 1.15); const d = dist(p, b); if (d < r && d < bd && b.z < 2.3) { bd = d; best = p; } }
+      const intended = b.inFlight && b.inFlight.kind === 'pass' ? b.inFlight.receiver : -1;
+      for (const p of this.players) { if (p.kickCool > 0) continue; const r = p.role === 'GK' ? (fast ? 0.95 : 1.6) : p.i === intended ? 1.4 : (fast ? 0.65 : 1.15); const d = dist(p, b); if (d < r && d < bd && b.z < 2.3) { bd = d; best = p; } }
       if (best) {
         const spd = Math.hypot(b.vx, b.vy);
         if (best.role === 'GK' && b.inFlight && b.inFlight.kind === 'shot' && spd > 20 && Math.abs(b.y - best.y) > 0.45 && this.rng() < 0.65) {
@@ -334,7 +336,8 @@
       if (f && f.kind === 'pass' && f.team !== p.team) {
         const passer = this.players[f.from]; p.stats.intercepts++;
         if (f.receiver >= 0) { const r = this.players[f.receiver]; this.explain(passer, 'intercepted', r.hname || r.name, this.snapAround(passer, { labels: { [p.i]: 'BLOCKED', [r.i]: 'TARGET' }, arrows: [{ from: { x: passer.x, y: passer.y }, to: { x: r.x, y: r.y } }] }));
-          if (r.human && dist(r, b) < 7 && dist(r, b) > 2.5) this.explain(r, 'rolledpast', '', this.snapAround(r, { arrows: [{ from: { x: passer.x, y: passer.y }, to: { x: b.x, y: b.y } }] })); }
+          const passedBy = ((b.x - r.x) * b.vx + (b.y - r.y) * b.vy) > 0; // ball is now beyond the receiver along its path
+          if (r.human && (f.minD || 99) < 3 && (f.chase || 0) < 1.5 && passedBy) this.explain(r, 'rolledpast', '', this.snapAround(r, { arrows: [{ from: { x: passer.x, y: passer.y }, to: { x: b.x, y: b.y } }] })); }
         this.emit({ type: 'intercept', by: p.i, from: f.from });
       } else if (f && f.kind === 'pass' && f.team === p.team && b.flags.includes(p.i)) {
         // OFFSIDE: whistle, free kick to the other team

@@ -100,7 +100,7 @@
         if (best >= 0 && bd < 14) { intercepted = true; receiver = { team: team === 'us' ? 'them' : 'us', idx: best }; to = { x: others[best].x, y: others[best].y }; }
       }
       const d = L.dist(from, to), speed = 15 + d * 0.12;
-      this.ball.flight = { from, to, t: 0, dur: d / speed, receiver, intercepted, loft: Math.min(2.4, d / 14) };
+      this.ball.flight = { from, to, t: 0, dur: d / speed, receiver, intercepted, loft: Math.min(2.4, d / 14), startD: (receiver.team === 'us' && receiver.idx === this.meIdx) ? L.dist(this.me, to) : undefined };
       this.holder = null; this.app.sfx.kick(); this.app.fx.dust(from.x, from.y);
       if (team === 'them') this.theirPasses++;
     }
@@ -108,7 +108,8 @@
       const f = this.ball.flight, mates = f.receiver.team === 'us' ? this.us : this.them, r = mates[f.receiver.idx];
       this.ball.flight = null;
       if (f.receiver.team === 'us' && f.receiver.idx === this.meIdx) {
-        if (L.dist(this.me, f.to) > 3) { // you let it roll past you
+        const closed = f.startD !== undefined && L.dist(this.me, f.to) < f.startD - 1.5; // you ran toward it
+        if (L.dist(this.me, f.to) > (closed ? 5 : 3)) { // you let it roll past you
           this.app.coach('The pass came to you — go and get it! 🏃', 'bad'); this.msgCool = 4; this.teach('drill-roll', 'The ball rolled past you 🏃', 'That pass was played to YOU, but you did not move to meet it, so the other team picked it up. When a pass comes, attack the ball.', 'Move toward passes meant for you.', { arrows: [{ from: { x: f.from.x, y: f.from.y }, to: { x: f.to.x, y: f.to.y } }] });
           let best = 0, bd = 1e9; this.them.forEach((p, i) => { const d = L.dist(p, f.to); if (d < bd) { bd = d; best = i; } });
           this.holder = { team: 'them', idx: best }; this.setPossession('them'); this.holdTimer = rnd(1, 2); return;

@@ -121,5 +121,29 @@ test('SHOOT during the kickoff freeze starts play immediately', () => {
   const s = new MatchSim({ rng }); const cm = s.addHuman('me', 0, 'CM'); eq(s.ball.holder, cm.i); eq(s.phase, 'kickoff');
   s.setInput('me', { mx: 0, my: 0, shoot: true }); const evs = run(s, 0.2, { mx: 0, my: 0 }); ok(evs.some(e => e.type === 'shot'), 'shot event'); eq(s.phase, 'play');
 });
+test('"rolled past you" does NOT fire when you were sprinting for the ball and got beaten to it', () => {
+  const s = new MatchSim({ rng }); s.phase = 'play';
+  const passer = s.addHuman('me', 0, 'CM'), me = s.addHuman('r', 0, 'ST'); passer.x = 40; passer.y = 34; me.x = 70; me.y = 44;
+  s.players.filter(p => p.team === 1).forEach((p, i) => { p.x = 90; p.y = 5 + i * 6; }); const red = s.players.find(p => p.team === 1 && p.role === 'CM'); red.x = 58; red.y = 36;
+  s.giveBall(passer.i); s.kickPass(passer.i, me.i);
+  const evs = run(s, 2.5, { mx: -1, my: -1 }, 'r'); // running toward the ball the whole time
+  ok(evs.some(e => e.type === 'intercept'), 'the pass was cut out'); ok(!evs.some(e => e.type === 'explain' && e.key === 'rolledpast'), 'no "rolled past you" lecture');
+});
+test('"rolled past you" DOES fire when the ball comes right to you and you stand still', () => {
+  const s = new MatchSim({ rng }); s.phase = 'play';
+  const passer = s.addHuman('me', 0, 'CM'), me = s.addHuman('r', 0, 'ST'); passer.x = 50; passer.y = 34; me.x = 70; me.y = 34;
+  s.players.filter(p => p.team === 1).forEach((p, i) => { p.x = 90; p.y = 5 + i * 6; }); const red = s.players.find(p => p.team === 1 && p.role === 'CM'); red.x = 76; red.y = 34; // waiting just behind you
+  s.giveBall(passer.i); s.ball.x = 50.8; s.kickPass(passer.i, me.i); // aimed at you...
+  s.ball.vx *= 1.6; me.y = 36.2; // ...overhit, and you are standing 2 m off its path, not moving
+  const evs = run(s, 2.5, { mx: 0, my: 0 }, 'r');
+  ok(evs.some(e => e.type === 'explain' && e.key === 'rolledpast'), 'you let it go by');
+});
+test('a hard pass does not go THROUGH the player it was meant for', () => {
+  const s = new MatchSim({ rng }); s.phase = 'play';
+  const passer = s.addHuman('me', 0, 'CM'), me = s.addHuman('r', 0, 'ST'); passer.x = 45; passer.y = 34; me.x = 60; me.y = 34;
+  s.players.filter(p => p.team === 1).forEach((p, i) => { p.x = 95; p.y = 5 + i * 6; });
+  s.giveBall(passer.i); s.kickPass(passer.i, me.i); s.ball.vx = 24; s.ball.vy = 0; // a rocket, straight at you
+  run(s, 1.5, { mx: 0, my: 0 }, 'r'); eq(s.ball.holder, me.i);
+});
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);
