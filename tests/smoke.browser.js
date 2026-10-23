@@ -30,24 +30,28 @@ function pageHook() {
     }
     if (window.Sim && Sim.MatchSim && !Sim.MatchSim.prototype.__hooked) {
       const step = Sim.MatchSim.prototype.step, emit = Sim.MatchSim.prototype.emit;
-      Sim.MatchSim.prototype.emit = function (e) { window.__events.push(e.type + (e.penalty ? '/penalty' : '')); return emit.call(this, e); };
+      window.__botStats = { holdSteps: 0, tackledSteps: 0, tacklesOnMe: 0 };
+      Sim.MatchSim.prototype.emit = function (e) { const me = this.players.find(p => p.human === 'me'); if (e.type === 'tackle' && me && e.from === me.i) window.__botStats.tacklesOnMe++; window.__events.push(e.type + (e.penalty ? '/penalty' : '')); return emit.call(this, e); };
       Sim.MatchSim.prototype.step = function (dt) {
         window.__sim = this;
         if (window.__bot) {
           const me = this.players.find(p => p.human === 'me'), b = this.ball;
           if (me && me.input) {
-            let tgt = null;
-            if (b.holder === me.i) { // we have it: keep it and drift slowly toward their box, so defenders tackle from behind
-              const g = this.goalOf(me.team), dx = g.x - me.x, dy = g.y - me.y, d = Math.hypot(dx, dy) || 1;
-              const k = Math.abs(g.x - me.x) < 12 ? 0 : 0.3; // stop on the edge of the box (a foul there is a penalty)
-              me.input.mx = dx / d * k; me.input.my = dy / d * k; me.input.pass = false; me.input.shoot = false;
+            if (b.holder === me.i) { window.__botStats.holdSteps++; if (this.players.some(p => p.team !== me.team && Math.hypot(p.x - b.x, p.y - b.y) < 1.15)) window.__botStats.tackledSteps++; }
+            if (b.holder === me.i) { // we have it: keep it, never pass or shoot
+              let opp = null, od = 1e9; for (const p of this.players) { if (p.team === me.team || p.role === 'GK') continue; const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < od) { od = d; opp = p; } }
+              let dx, dy, k;
+              if (opp && od < 7) { dx = me.x - opp.x; dy = me.y - opp.y; k = 0.35; } // a chaser is close: turn our back on him and jog away, so his tackle comes from behind
+              else { const g = this.goalOf(me.team); dx = g.x - me.x; dy = g.y - me.y; k = Math.abs(g.x - me.x) < 12 ? 0 : 0.3; } // otherwise drift to the edge of their box (a foul there is a penalty)
+              const d = Math.hypot(dx, dy) || 1; me.input.mx = dx / d * k; me.input.my = dy / d * k; me.input.pass = false; me.input.shoot = false;
               return step.call(this, dt);
             }
-            if (b.holder >= 0) { const h = this.players[b.holder]; if (h.team !== me.team) tgt = h; }
-            else if (b.inFlight && b.inFlight.receiver >= 0 && this.players[b.inFlight.receiver].team !== me.team) tgt = this.players[b.inFlight.receiver];
-            else { let bd = 1e9; for (const p of this.players) { if (p.team === me.team || p.role === 'GK') continue; const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < bd) { bd = d; tgt = p; } } }
-            if (tgt) { // aim just behind the carrier, inside tackling range of the ball
-              const dx = tgt.x - tgt.fx * 0.35 - me.x, dy = tgt.y - tgt.fy * 0.35 - me.y, d = Math.hypot(dx, dy) || 1;
+            let tx = null, ty = null;
+            if (b.holder >= 0) { const h = this.players[b.holder]; if (h.team !== me.team) { tx = h.x - h.fx * 0.35; ty = h.y - h.fy * 0.35; } } // just behind the carrier, in tackling range
+            else if (b.inFlight && b.inFlight.team !== me.team && this.ballLanding) { const l = this.ballLanding(); tx = l.x; ty = l.y; } // beat the receiver to the landing spot
+            else if (b.holder < 0) { tx = b.x; ty = b.y; } // loose ball: go get it
+            if (tx !== null) {
+              const dx = tx - me.x, dy = ty - me.y, d = Math.hypot(dx, dy) || 1;
               me.input.mx = dx / d; me.input.my = dy / d; me.input.pass = false; me.input.shoot = false;
             }
           }
@@ -80,10 +84,17 @@ async function startLocalServer() {
   await page.addInitScript(pageHook);
 
   log('open', url);
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
-  await page.waitForTimeout(800);
+  let rules = null;
+  for (let attempt = 1; attempt <= 4; attempt++) { // a sleeping free-tier host can answer with a placeholder page first
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForTimeout(800);
+    rules = await page.evaluate(() => window.Rules && Rules.RULES.length);
+    if (rules && await page.$('[data-mode="match"]')) break;
+    log(`attempt ${attempt}: page is not the game yet (title "${await page.title()}", rule library ${rules}); retrying in 15s`);
+    if (attempt === 4) { console.log('\n✗ FAIL: the game never loaded at ' + url); process.exit(1); }
+    await page.waitForTimeout(15000);
+  }
   if (await page.$('#rotateSkip:visible')) await page.click('#rotateSkip');
-  const rules = await page.evaluate(() => window.Rules && Rules.RULES.length);
   log('menu loaded | rule library:', rules, 'rules | rule book button:', !!(await page.$('#menuRulesBtn')));
 
   // Solo match as a center back (near our own box, so a foul can be a penalty).
@@ -115,6 +126,8 @@ async function startLocalServer() {
   }
   await page.keyboard.up('ArrowRight');
   const events = await page.evaluate(() => window.__events);
+  const bs = await page.evaluate(() => window.__botStats);
+  log(`bot held the ball ${(bs.holdSteps / 60).toFixed(0)}s, ${(bs.tackledSteps / 60).toFixed(0)}s of it with a defender in tackling range; tackled ${bs.tacklesOnMe}x`);
   const counts = {}; events.forEach(e => { if (/foul|advantage|handball|goal|halftime/.test(e)) counts[e] = (counts[e] || 0) + 1; });
   await browser.close(); if (server) server.proc.kill();
 
