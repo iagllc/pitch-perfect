@@ -41,7 +41,7 @@
     draw(P) {
       const s = this.steps[this.i]; if (!s || s.end) return;
       if (s.target) { const t = s.target(); const pulse = 0.7 + Math.sin(P.t * 6) * 0.3; P.ring(t.x, t.y, 2.2 + pulse, '#ffd23f', { width: 4, glow: 'rgba(255,210,63,.35)' }); if (L.dist(this.me, t) > 4) { const dx = t.x - this.me.x, dy = t.y - this.me.y, n = Math.hypot(dx, dy); P.arrow({ x: this.me.x + dx / n * 3, y: this.me.y + dy / n * 3 }, { x: t.x - dx / n * 2.5, y: t.y - dy / n * 2.5 }, '#ffd23f', 5); } }
-      if (this.i === 2 || this.i === 5) { const [px, py] = P.toPx(this.me.x, this.me.y - 4); P.ctx.font = `700 ${P.scale * 2.2}px ${getComputedStyle(document.body).fontFamily}`; P.ctx.textAlign = 'center'; P.ctx.fillStyle = '#ffd23f'; P.ctx.strokeStyle = 'rgba(0,0,0,.6)'; P.ctx.lineWidth = 4; const w = this.i === 2 ? 'SPACE = PASS' : 'X = SHOOT'; P.ctx.strokeText(w, px, py + Math.sin(P.t * 5) * 4); P.ctx.fillText(w, px, py + Math.sin(P.t * 5) * 4); }
+      if (this.i === 2 || this.i === 5) { const [px, py] = P.toPx(this.me.x, this.me.y - 4); P.ctx.font = `700 ${P.scale * 2.2}px ${getComputedStyle(document.body).fontFamily}`; P.ctx.textAlign = 'center'; P.ctx.fillStyle = '#ffd23f'; P.ctx.strokeStyle = 'rgba(0,0,0,.6)'; P.ctx.lineWidth = 4; const T = Touch.isTouchDevice(); const w = this.i === 2 ? (T ? 'TAP PASS' : 'SPACE = PASS') : (T ? 'TAP SHOOT' : 'X = SHOOT'); P.ctx.strokeText(w, px, py + Math.sin(P.t * 5) * 4); P.ctx.fillText(w, px, py + Math.sin(P.t * 5) * 4); }
     }
   }
   window.Guide = Guide;

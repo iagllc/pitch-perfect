@@ -244,7 +244,7 @@
       P.drawPlayer(this.me, { team: 'us', number: this.meIdx + 1, me: true, hasBall: this.me === hp, label: 'YOU', labelColor: '#b6ff3b' });
       P.drawBall(this.ball);
       this.app.fx.draw(P);
-      if (this.countdown > 0) { const n = Math.ceil(this.countdown); P.textM(F.halfway, F.h / 2 - 4, n > 3 ? 'READY?' : String(n), n > 3 ? '#fff' : '#ffd23f', 9); P.textM(F.halfway, F.h / 2 + 5, 'Arrow keys / WASD or click to move', '#fff', 2); }
+      if (this.countdown > 0) { const n = Math.ceil(this.countdown); P.textM(F.halfway, F.h / 2 - 4, n > 3 ? 'READY?' : String(n), n > 3 ? '#fff' : '#ffd23f', 9); P.textM(F.halfway, F.h / 2 + 5, Touch.isTouchDevice() ? 'Drag on the left of the screen to move' : 'Arrow keys / WASD or click to move', '#fff', 2); }
       else if (this.timeLeft > this.duration - 1.2) P.textM(F.halfway, F.h / 2 - 4, 'GO!', '#b6ff3b', 9);
     }
   }

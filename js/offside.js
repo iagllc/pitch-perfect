@@ -15,8 +15,8 @@
       this.app.pitch.setView({ x: 36, y: -3, w: 73, h: 74 });
       this.app.setPossession(null); this.app.setCombo(null); this.app.setScore(0);
       this.app.coach(this.variant === 'attack'
-        ? 'You are the STRIKER. Stay onside, then press SPACE (or the PASS button) to call for the ball!'
-        : 'You control the BACK LINE. Watch the striker — step up to catch him offside, or drop to cover!', 'info');
+        ? (Touch.isTouchDevice() ? 'You are the STRIKER. Stay onside, then tap PASS to call for the ball!' : 'You are the STRIKER. Stay onside, then press SPACE (or the PASS button) to call for the ball!')
+        : (Touch.isTouchDevice() ? 'You control the BACK LINE. Drag left to step up, right to drop. Catch the striker offside, or drop to cover!' : 'You control the BACK LINE. Watch the striker — step up to catch him offside, or drop to cover!'), 'info');
       Touch.enable(true, this.variant === 'attack' ? ['pass'] : []); Touch.actions.pass = () => this.requestPass();
       this.explainAfter = null;
       this.nextRound(true);

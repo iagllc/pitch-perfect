@@ -27,7 +27,7 @@
       this.app.coach(guidedText(this), 'info');
       Touch.enable(true, ['pass', 'shoot'], { buttonsAlways: true }); Touch.actions.pass = () => this.pending.pass = true; Touch.actions.shoot = () => this.pending.shoot = true;
       try { this.app.sfx.crowdStart(); } catch (e) {}
-      function guidedText(m) { return m.mode === 'guide' ? 'Welcome! Let’s learn the basics in 60 seconds.' : `You are the ${TEAM_NAME[m.team]} ${roleName(m.role)}. Space = pass, X = shoot. Keep your shape and stay onside!`; }
+      function guidedText(m) { const T = Touch.isTouchDevice(); return m.mode === 'guide' ? 'Welcome! Let’s learn the basics in 60 seconds.' : `You are the ${TEAM_NAME[m.team]} ${roleName(m.role)}. ${T ? 'Drag on the left to run, tap PASS or SHOOT.' : 'Space = pass, X = shoot.'} Keep your shape and stay onside!`; }
     }
     stop() { try { this.app.sfx.crowdStop(); } catch (e) {} this.app.pitch.setCamera(null); }
     onKey(code, down) {

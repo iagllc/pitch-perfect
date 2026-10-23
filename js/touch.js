@@ -3,7 +3,12 @@
   'use strict';
   const Touch = {
     vec: { x: 0, y: 0 }, enabled: false, actions: {},
-    isTouchDevice() { return /touch=1/.test(location.search) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window && navigator.maxTouchPoints > 0); },
+    isTouchDevice() {
+      if (/touch=1/.test(location.search)) return true; if (/touch=0/.test(location.search)) return false;
+      const ua = navigator.userAgent || '';
+      const ipadDesktopMode = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1; // iPad Safari pretending to be a Mac
+      return /iPad|iPhone|iPod|Android/i.test(ua) || ipadDesktopMode || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+    },
     init(stage) {
       this.stage = stage; this.layer = document.getElementById('touchLayer'); this.base = this.layer.querySelector('.joy-base'); this.knob = this.layer.querySelector('.joy-knob');
       this.btnPass = document.getElementById('tPass'); this.btnShoot = document.getElementById('tShoot');
