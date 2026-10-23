@@ -3,7 +3,7 @@
   'use strict';
   const L = Logic, F = L.FIELD;
   const TEAM_NAME = ['BLUE', 'RED'], TEAM_COL = ['#3d8bff', '#ff5a5a'];
-  const MSG = { 'Throw-in': 'THROW-IN', 'Goal kick': 'GOAL KICK', 'Corner': 'CORNER', 'Kickoff': 'KICKOFF', 'Offside!': 'OFFSIDE!', 'Full time!': 'FULL TIME', 'Halftime': 'HALFTIME', 'Second half': 'SECOND HALF' };
+  const MSG = { 'Throw-in': 'THROW-IN', 'Goal kick': 'GOAL KICK', 'Corner': 'CORNER', 'Kickoff': 'KICKOFF', 'Offside!': 'OFFSIDE!', 'Full time!': 'FULL TIME', 'Halftime': 'HALFTIME', 'Second half': 'SECOND HALF', 'Free kick': 'FREE KICK', 'Handball': 'HANDBALL', 'Indirect free kick': 'INDIRECT FREE KICK', 'PENALTY!': 'PENALTY!' };
 
   class MatchClient {
     constructor(app) { this.app = app; }
@@ -46,14 +46,14 @@
     }
     dir() { const v = this.view; return (this.team === 0 ? 1 : -1) * ((v && v.half === 2) ? -1 : 1); }
     viewFromSim() {
-      const s = this.sim; return { players: s.players, ball: s.ball, holder: s.ball.holder, score: s.score, time: s.time, phase: s.phase, half: s.half, msg: s.msg, poss: s.possTeam, flags: s.ball.flags, inFlight: s.ball.inFlight ? s.ball.inFlight.kind : '', duration: s.duration };
+      const s = this.sim, h = s.ball.holder >= 0 ? s.players[s.ball.holder] : null; return { players: s.players, ball: s.ball, holder: s.ball.holder, holdTime: h ? h.holdTime : 0, mustKick: !!(h && h.mustKick), score: s.score, time: s.time, phase: s.phase, half: s.half, msg: s.msg, poss: s.possTeam, flags: s.ball.flags, inFlight: s.ball.inFlight ? s.ball.inFlight.kind : '', duration: s.duration };
     }
     viewFromNet() {
       if (this.snaps.length < 1) return null; const now = performance.now() - 120; let a = this.snaps[0], b = this.snaps[0];
       for (let i = 0; i < this.snaps.length; i++) { if (this.snaps[i].at <= now) a = this.snaps[i]; if (this.snaps[i].at >= now) { b = this.snaps[i]; break; } b = this.snaps[i]; }
       const k = b.at > a.at ? L.clamp((now - a.at) / (b.at - a.at), 0, 1) : 1, A = a.s, B = b.s, lerp = (x, y) => x + (y - x) * k;
       const players = A.p.map((p, i) => { const r = this.roster[i]; return { i, x: lerp(p[0], B.p[i][0]), y: lerp(p[1], B.p[i][1]), team: r.team, role: r.role, name: r.name, jersey: r.jersey, human: r.human, hname: r.hname, avatar: r.avatar, target: { x: lerp(A.tg[i][0], B.tg[i][0]), y: lerp(A.tg[i][1], B.tg[i][1]) } }; });
-      return { players, ball: { x: lerp(A.b[0], B.b[0]), y: lerp(A.b[1], B.b[1]), z: lerp(A.b[2], B.b[2]), vx: B.b[3], vy: B.b[4] }, holder: B.h, score: B.sc, time: B.t, phase: B.ph, half: B.hf || 1, msg: B.msg, poss: B.poss, flags: B.fl, inFlight: B.ifk, duration: this.duration };
+      return { players, ball: { x: lerp(A.b[0], B.b[0]), y: lerp(A.b[1], B.b[1]), z: lerp(A.b[2], B.b[2]), vx: B.b[3], vy: B.b[4] }, holder: B.h, holdTime: B.ht || 0, mustKick: !!B.mk, score: B.sc, time: B.t, phase: B.ph, half: B.hf || 1, msg: B.msg, poss: B.poss, flags: B.fl, inFlight: B.ifk, duration: this.duration };
     }
     update(dt) {
       this.app.pitch.t += dt; if (this.over) return;
@@ -108,6 +108,12 @@
         case 'tackle': P.sfx.thud(); P.fx.text(ball.x, ball.y - 3, e.from === me ? 'Tackled!' : (e.by === me ? 'Won it! 💪' : 'Tackle'), e.from === me ? '#ff8a8a' : '#fff', 2); break;
         case 'intercept': P.fx.text(ball.x, ball.y - 3, e.by === me ? 'Intercepted! 💪' : 'Cut out!', e.from === me ? '#ff8a8a' : '#fff', 2); break;
         case 'offside': P.sfx.whistle(); P.fx.kick(0.3); P.fx.text(ball.x, ball.y - 3, '🚩 OFFSIDE', '#ff5a5a', 3); break;
+        case 'foul': { P.sfx.whistle(); P.fx.kick(0.4); const mine = e.by === me; P.fx.text(ball.x, ball.y - 3, e.penalty ? 'PENALTY!' : 'FOUL', '#ff5a5a', e.penalty ? 4 : 3); if (e.card) { P.fx.text(ball.x, ball.y - 7, '🟨 YELLOW CARD', '#ffd23f', 2.4); } P.coach(e.penalty ? (mine ? 'You fouled in your own box. Penalty!' : 'Penalty! A foul inside the box is always a penalty kick.') : (mine ? 'Foul: you tackled from behind. Free kick to them.' : 'Free kick. Tackle from behind = foul.'), 'bad'); break; }
+        case 'advantage': P.fx.text(ball.x, ball.y - 3, 'ADVANTAGE ▶ play on', '#b6ff3b', 2.4); P.coach('Fouled, but you kept the ball: the ref plays ADVANTAGE and lets it go on.', 'good'); break;
+        case 'handball': { P.sfx.whistle(); P.fx.text(ball.x, ball.y - 3, e.offense ? '🖐️ HANDBALL' : 'Hit the arm: play on', e.offense ? '#ff5a5a' : '#fff', e.offense ? 3 : 2); P.coach(e.offense ? 'Handball! The arm was out wide, making the body bigger. Free kick.' : 'Ball hit the arm, but it was tucked in close to the body: NOT handball, play on.', e.offense ? 'bad' : 'info'); break; }
+        case 'backpass': P.coach('Back-pass: the keeper cannot pick up a ball a teammate kicks to them. Feet only!', 'info'); break;
+        case 'backpassfoul': P.sfx.whistle(); P.fx.text(ball.x, ball.y - 3, 'INDIRECT FREE KICK', '#ff5a5a', 2.6); break;
+        case 'eightsec': P.sfx.whistle(); P.fx.text(ball.x, ball.y - 3, '8 SECONDS! CORNER', '#ff5a5a', 3); P.coach('The keeper held the ball over 8 seconds: corner kick to the other team.', 'bad'); break;
         case 'out': P.sfx.tick(); break;
         case 'play': if (v && v.time < 0.1) P.sfx.start(); break;
         case 'halftime': P.sfx.whistle(); P.halftime(e.score, e.stats, this.team, this.mode !== 'net' ? this.sim.report('me') : null); break;
@@ -121,7 +127,7 @@
       const result = mine > theirs ? 'You WIN! 🏆' : mine < theirs ? 'Lost this one 😤' : 'Draw 🤝';
       const r = report || {}; const pct = r.shape || 0; const lessons = Explain.lessons.slice(0, 5);
       const fb = lessons.length ? { face: '🧢', text: 'Your coach noticed: ' + lessons.map(l => l.lesson).join(' · ') } : { face: '🤩', text: 'No mistakes flagged. Clean game — keep playing like that!' };
-      const stats = [{ k: 'In position', v: pct + '%' }, { k: 'Goals', v: r.goals || 0 }, { k: 'Passes', v: r.passes || 0 }, { k: 'Shots', v: r.shots || 0 }, { k: 'Tackles', v: r.tackles || 0 }, { k: 'Offsides', v: r.offsides || 0 }];
+      const iq = Rules.refIQ(); const stats = [{ k: 'In position', v: pct + '%' }, { k: 'Goals', v: r.goals || 0 }, { k: 'Passes', v: r.passes || 0 }, { k: 'Shots', v: r.shots || 0 }, { k: 'Tackles', v: r.tackles || 0 }, { k: 'Fouls', v: r.fouls || 0 }, { k: 'Offsides', v: r.offsides || 0 }, ...(iq !== null ? [{ k: 'Ref IQ', v: iq + '%' }] : [])];
       this.app.finish({ title: `${result}  ${TEAM_NAME[this.team]} ${mine} – ${theirs} ${TEAM_NAME[1 - this.team]}`, score: mine * 100 + (r.goals || 0) * 50 + (r.passes || 0) * 5 + (r.tackles || 0) * 10 + (r.intercepts || 0) * 10, pct, stars: L.stars(pct + (mine > theirs ? 20 : 0)), feedback: fb, stats, lessons,
         report: { mode: this.mode === 'net' ? 'Online match' : 'Match vs AI', name: this.name, role: `${TEAM_NAME[this.team]} ${roleName(this.role)}`, result: `${TEAM_NAME[this.team]} ${mine} – ${theirs} ${TEAM_NAME[1 - this.team]} (${result.replace(/[^\w !]/g, '').trim()})`, shape: pct, stats, lessons: Explain.lessons, tstats } });
     }
@@ -144,6 +150,7 @@
       if (v.holder === this.myIdx) { const inp = this.inputVec(); if (Math.hypot(inp.mx, inp.my) > 0.3) P.arrow(me, { x: L.clamp(me.x + inp.mx * 10, 0, F.w), y: L.clamp(me.y + inp.my * 10, 0, F.h) }, 'rgba(255,255,255,.5)', 2); }
       this.drawPlayers(v.players, v.holder, me);
       P.drawBall(v.ball);
+      if (v.holder >= 0 && v.players[v.holder].role === 'GK' && v.players[v.holder].human && v.phase === 'play') { const gk = v.players[v.holder]; if (v.mustKick) P.textM(gk.x, gk.y - 4.5, 'BACK-PASS: kick it!', '#ffd23f', 1.6); else if (v.holdTime > 3) { const left = Math.max(0, 8 - v.holdTime); P.textM(gk.x, gk.y - 4.5, `release! ${Math.ceil(left)}`, left < 3 ? '#ff5a5a' : '#ffd23f', 2); } }
       if (this.goalT < 1.3) P.netRipple(this.goalSide, this.goalT);
       if (this.guide) this.guide.draw(P);
       this.app.fx.draw(P);

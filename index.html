@@ -27,6 +27,7 @@
       <canvas id="menuAvatar" width="80" height="100"></canvas>
       <div class="me-info"><b id="menuAvatarName">Your player</b><span id="menuAvatarSet">Kids set</span></div>
       <button class="btn cyan small" id="menuAvatarBtn">✏️ Edit avatar</button>
+      <button class="btn gold small" id="menuRulesBtn">📘 Rule book</button>
       <button class="btn ghost small camBtn">🎥 Camera: full field</button>
     </div>
 
@@ -50,6 +51,16 @@
     <div class="footer-row">
       <span>Arrows / WASD or joystick to move · Space = pass · X = shoot · Z = camera · P = pause · M = mute</span>
       <button class="btn ghost small muteBtn" title="Sound on/off">🔊</button>
+    </div>
+  </section>
+
+  <!-- RULE BOOK -->
+  <section id="rules" class="screen">
+    <div class="lobby-wrap">
+      <h2 class="gradient-text">📘 Rule book</h2>
+      <p class="hint" style="margin:0">The rules that confuse everyone, in plain words. Rules you have answered right in a game get a ✓.</p>
+      <div class="lobby-box" id="rulesUI" style="align-items:stretch;text-align:left"></div>
+      <button class="btn ghost" id="rulesBack">Back to menu</button>
     </div>
   </section>
 
@@ -112,6 +123,7 @@
         <div class="rule-row" id="r1"><span class="mark">✗</span> In the other half?</div>
         <div class="rule-row" id="r2"><span class="mark">✗</span> Ahead of the ball?</div>
         <div class="rule-row" id="r3"><span class="mark">✗</span> Past the 2nd-last defender?</div>
+        <div class="rule-row" id="r4" style="display:none"><span class="mark">✗</span> From a throw-in, goal kick or corner?</div>
         <div class="rule-verdict good" id="rv">= ONSIDE ✓</div>
         <div class="rp-note">All three ✓ when the ball is kicked = offside</div>
       </div>
@@ -135,6 +147,7 @@
 
 </div>
 <script src="js/logic.js"></script>
+<script src="js/rules.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/fx.js"></script>

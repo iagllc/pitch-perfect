@@ -27,7 +27,24 @@
       this.over = true; Touch.enable(false); this.app.hideChoices(); const max = this.rounds * 100, pct = Math.round(100 * this.points / max);
       this.app.finish({ title: this.title, score: this.points, pct, stars: L.stars(pct), feedback: this.feedback(pct), stats: this.stats(), lessons: Explain.lessons.slice(0, 4), report: { mode: this.title, name: 'You', role: '', result: `${this.points} points`, stars: L.stars(pct), stats: this.stats(), lessons: Explain.lessons } });
     }
-    update(dt) { if (this.over || Explain.paused) return; this.app.pitch.t += dt; this.tick(dt); this.app.setScore(this.points); }
+    update(dt) { if (this.over || Explain.paused) return; this.app.pitch.t += dt; if (this.rule) { this.ruleTick(dt); } else this.tick(dt); this.app.setScore(this.points); }
+    choose(k) { if (this.rule) this.answerRule(k); } // drills without choices (corner) still answer rule rounds
+    ruleRound(tags) { // one question from the shared rule library, matched to this drill
+      this.rule = Rules.pick(tags, 1)[0]; this.phase = 'choose'; this.onPick = null; this.hotkeys = { Digit1: 0, Digit2: 1, Digit3: 2 }; this.rulesRight = this.rulesRight || 0;
+      this.app.choices(this.rule.a.map((a, i) => ({ label: a, key: i })), k => this.answerRule(k), '🧑‍⚖️ Rule check: ' + this.rule.q);
+    }
+    answerRule(k) {
+      const r = this.rule; if (this.phase !== 'choose') return; this.app.hideChoices(); this.phase = 'resolve'; this.resT = 0; const ok = k === r.ok; Rules.record(r.id, ok);
+      if (ok) { this.rulesRight = (this.rulesRight || 0) + 1; this.award(100, 'CORRECT ✓', r.why, 'good'); }
+      else { this.award(0, 'NOT QUITE', r.why, 'bad'); this.explainAfter = { key: 'rule-' + r.id, title: r.title, text: r.why, lesson: r.lesson }; }
+    }
+    ruleTick(dt) { if (this.phase === 'resolve') this.resolveTimer(dt, 2.6, () => { this.rule = null; this.nextRound(false); }); }
+    drawRule() {
+      const P = this.app.pitch, c = P.ctx; P.drawField(); c.fillStyle = 'rgba(0,0,20,.55)'; c.fillRect(0, 0, P.cssW, P.cssH);
+      const cx = P.view.x + P.view.w / 2, cy = P.view.y + P.view.h * 0.22; P.textM(cx, cy, '🧑‍⚖️ RULE CHECK', '#ffd23f', 4);
+      const words = this.rule.q.split(' '); const lines = []; let line = ''; for (const w of words) { if ((line + ' ' + w).trim().length > 46) { lines.push(line.trim()); line = w; } else line += ' ' + w; } lines.push(line.trim());
+      lines.forEach((l, i) => P.textM(cx, cy + 6 + i * 3.2, l, '#fff', 2.2)); this.app.fx.draw(P);
+    }
     flight(from, to, dur, loft) { this.fl = { from: { ...from }, to: { ...to }, t: 0, dur, loft }; }
     stepFlight(dt) { const f = this.fl; if (!f) return false; f.t += dt; const k = Math.min(1, f.t / f.dur); this.ball.x = f.from.x + (f.to.x - f.from.x) * k; this.ball.y = f.from.y + (f.to.y - f.from.y) * k; this.ball.z = Math.sin(k * Math.PI) * f.loft; this.ball.spin += dt * 12; if (k >= 1) { this.fl = null; return true; } return false; }
     resolveTimer(dt, len, then) { this.resT = (this.resT || 0) + dt; if (this.resT >= len) { this.resT = 0; if (this.pending) { this.points += this.pending; this.pending = 0; } then(); } }
@@ -44,8 +61,7 @@
     start() { this.title = 'Throw-in Report'; this.good = 0; this.quizOK = 0; this.late = 0; this.begin(6, { x: 30, y: -7, w: 62, h: 44 }); Touch.enable(true, []); this.app.coach('You are taking the throw-in. Find the teammate who is FREE — a marked player gets the ball stolen.', 'info'); this.nextRound(true); }
     setup() {
       this.phase = 'choose'; this.timer = 6; this.stolen = false; this.ball = { x: 60, y: -0.5, z: 1.5, spin: 0 }; this.me = { x: 60, y: -1.2 };
-      this.quiz = (this.round === 3 || this.round === 6) ? pick(QUIZ) : null;
-      if (this.quiz) { this.app.choices(this.quiz.a.map((a, i) => ({ label: a, key: i })), k => this.choose(k), this.quiz.q); this.hotkeys = { Digit1: 0, Digit2: 1, Digit3: 2 }; this.onPick = null; return; }
+      this.quiz = null; if (this.round === 3 || this.round === 6) return this.ruleRound(['throwin', 'offside']);
       const open = Math.floor(Math.random() * 3);
       this.mates = [{ x: rnd(51, 55), y: rnd(5, 9) }, { x: rnd(62, 68), y: rnd(9, 14) }, { x: rnd(70, 78), y: rnd(16, 24) }].map((m, i) => ({ ...m, open: i === open, letter: 'ABC'[i] }));
       this.defs = this.mates.map(m => m.open ? { x: m.x + rnd(5, 8) * (Math.random() < 0.5 ? -1 : 1), y: m.y + rnd(4, 7) } : { x: m.x + rnd(-1.6, 1.6), y: m.y + rnd(1.2, 2) });
@@ -55,6 +71,7 @@
       this.onPick = m => { let best = -1, bd = 5; this.mates.forEach((q, i) => { const d = L.dist(q, m); if (d < bd) { bd = d; best = i; } }); if (best >= 0) this.choose(best); };
     }
     choose(k) {
+      if (this.rule) return this.answerRule(k);
       if (this.phase !== 'choose') return; this.app.hideChoices(); this.phase = 'resolve'; this.resT = 0;
       if (this.quiz) { const ok = k === this.quiz.ok; if (ok) { this.quizOK++; this.award(100, 'CORRECT ✓', this.quiz.why, 'good'); } else { this.award(0, 'NOT QUITE', this.quiz.why, 'bad'); this.explainAfter = { key: 'throw-rule', title: 'Throw-in rule 📏', text: this.quiz.why, lesson: this.quiz.q + ' ' + this.quiz.a[this.quiz.ok] + '.' }; } return; }
       const m = this.mates[k]; this.chosen = k; this.flight(this.ball, m, 0.9, 2.5);
@@ -69,8 +86,9 @@
       this.resolveTimer(dt, 1.6, () => this.nextRound(false));
     }
     feedback(pct) { return pct >= 80 ? { face: '🧠', text: 'Sharp eyes! You spot the free player every time.' } : this.late >= 2 ? { face: '⏱️', text: 'Decide faster: look up before you pick up the ball.' } : { face: '👀', text: 'Look for SPACE around a teammate, not just the closest one.' }; }
-    stats() { return [{ k: 'Free picks', v: this.good }, { k: 'Rules right', v: this.quizOK }, { k: 'Too slow', v: this.late }]; }
+    stats() { return [{ k: 'Free picks', v: this.good }, { k: 'Rules right', v: this.rulesRight || 0 }, { k: 'Too slow', v: this.late }]; }
     draw() {
+      if (this.rule) return this.drawRule();
       const P = this.app.pitch, c = P.ctx; P.drawField();
       if (this.quiz) { c.fillStyle = 'rgba(0,0,20,.45)'; c.fillRect(0, 0, P.cssW, P.cssH); P.textM(61, 10, '📏 RULE CHECK', '#ffd23f', 4); P.textM(61, 17, this.quiz.q, '#fff', 2.2); P.drawPlayer(this.me, { team: 'us', number: 7, me: true }); P.drawBall(this.ball); this.app.fx.draw(P); return; }
       if (this.phase === 'choose') { const [px, py] = P.toPx(this.me.x, this.me.y - 2.5); c.fillStyle = 'rgba(0,0,0,.5)'; c.fillRect(px - 30, py - 4, 60, 8); c.fillStyle = this.timer < 2 ? '#ff5a5a' : '#ffd23f'; c.fillRect(px - 30, py - 4, 60 * this.timer / 6, 8); }
@@ -92,8 +110,9 @@
     { id: 'free', ans: 'drop', cue: 'His teammate is FREE beside him — if you dive in he just passes.', carrier: { x: 58, y: 34, face: -1 }, mates: 'stretched', support: 'free' },
   ];
   class PressDropDrill extends Drill {
-    start() { this.title = 'Press vs Drop Report'; this.right = 0; this.begin(8, { x: 8, y: -4, w: 80, h: 76 }); Touch.enable(true, []); this.order = SCENES.slice().sort(() => Math.random() - 0.5); this.app.coach('They have the ball. You are the midfielder in front of the defense. PRESS (go win it) or DROP (slow him down)?', 'info'); this.nextRound(true); }
+    start() { this.title = 'Press vs Drop Report'; this.right = 0; this.begin(9, { x: 8, y: -4, w: 80, h: 76 }); Touch.enable(true, []); this.order = SCENES.slice().sort(() => Math.random() - 0.5); this.app.coach('They have the ball. You are the midfielder in front of the defense. PRESS (go win it) or DROP (slow him down)?', 'info'); this.nextRound(true); }
     setup() {
+      if (this.round === 9) return this.ruleRound(['fouls']);
       const sc = this.order[(this.round - 1) % SCENES.length]; this.sc = sc; this.phase = 'choose'; this.timer = 4; this.me = { x: 48, y: 34 }; this.start0 = { ...this.me };
       const c = sc.carrier; this.carrier = { x: c.x, y: c.y, face: c.face }; this.ball = { x: c.x + (c.loose ? -3 : c.face * 0.8), y: c.y, z: 0, spin: 0 };
       this.support = { x: c.x + 2, y: c.y + (c.y < 20 ? 10 : -10) }; this.supportMarker = sc.support === 'marked' ? { x: this.support.x - 1.5, y: this.support.y + 1.2 } : null;
@@ -102,6 +121,7 @@
       this.app.choices([{ label: 'PRESS 🔥', key: 'press' }, { label: 'DROP 🛡️', key: 'drop' }], k => this.choose(k), 'What do you do?'); this.hotkeys = { Digit1: 'press', Digit2: 'drop', ArrowRight: 'press', ArrowLeft: 'drop' }; this.onPick = null;
     }
     choose(k) {
+      if (this.rule) return this.answerRule(k);
       if (this.phase !== 'choose') return; this.app.hideChoices(); this.phase = 'resolve'; this.resT = 0; this.chosen = k; const sc = this.sc, ok = k === sc.ans;
       if (ok) { this.right++; this.award(100, k === 'press' ? 'PRESS ✓' : 'DROP ✓', sc.cue, 'good'); }
       else {
@@ -119,8 +139,9 @@
       if (t > 2.6) { this.won = false; this.resT = 0; if (this.pending) { this.points += this.pending; this.pending = 0; } this.nextRound(false); }
     }
     feedback(pct) { return pct >= 75 ? { face: '🧠', text: 'You read the game like a coach: press when he is turned or trapped, drop when he faces goal with help.' } : { face: '👀', text: 'Look at two things: where is the carrier FACING, and is your team SET behind you?' }; }
-    stats() { return [{ k: 'Right calls', v: this.right }, { k: 'Rounds', v: this.rounds }]; }
+    stats() { return [{ k: 'Right calls', v: this.right }, { k: 'Rule check', v: (this.rulesRight || 0) + '/1' }]; }
     draw() {
+      if (this.rule) return this.drawRule();
       const P = this.app.pitch; P.drawField();
       if (this.phase === 'choose') { const sc = this.sc; P.textM(48, -2, sc.mates === 'compact' ? 'Your team: SET ✓' : sc.mates === 'ahead' ? 'Your team: still running back!' : 'Your team: STRETCHED — gap behind you', sc.mates === 'compact' ? '#b6ff3b' : '#ff8a8a', 2); P.arrow(this.carrier, { x: this.carrier.x + this.carrier.face * 8, y: this.carrier.y }, 'rgba(255,210,63,.9)', 3); P.textM(this.carrier.x + this.carrier.face * 10, this.carrier.y - 2.5, this.carrier.face === -1 ? 'facing YOUR goal' : 'back to goal', '#ffd23f', 1.5);
         const [px, py] = P.toPx(this.me.x, this.me.y - 3.2); P.ctx.fillStyle = 'rgba(0,0,0,.5)'; P.ctx.fillRect(px - 30, py - 4, 60, 8); P.ctx.fillStyle = this.timer < 1.5 ? '#ff5a5a' : '#ffd23f'; P.ctx.fillRect(px - 30, py - 4, 60 * this.timer / 4, 8); }
@@ -132,8 +153,9 @@
 
   // ---------------- 3. Corner Attack ----------------
   class CornerDrill extends Drill {
-    start() { this.title = 'Corner Report'; this.goals = 0; this.late = 0; this.camp = 0; this.begin(6, { x: 66, y: -4, w: 43, h: 76 }); Touch.enable(true, []); this.app.coach('Corner! Start DEEP (not in the 6-yard box). When the ball is kicked a ring shows where it lands: sprint there and get there first.', 'info'); this.nextRound(true); }
+    start() { this.title = 'Corner Report'; this.goals = 0; this.late = 0; this.camp = 0; this.begin(7, { x: 66, y: -4, w: 43, h: 76 }); Touch.enable(true, []); this.app.coach('Corner! Start DEEP (not in the 6-yard box). When the ball is kicked a ring shows where it lands: sprint there and get there first.', 'info'); this.nextRound(true); }
     setup() {
+      if (this.round === 7) return this.ruleRound(['corner', 'handball']);
       this.phase = 'wait'; this.t = 0; this.side = Math.random() < 0.5 ? 0 : 1; const cy = this.side ? F.h - 0.5 : 0.5;
       this.taker = { x: 104.3, y: cy }; this.ball = { x: 104, y: cy + (this.side ? -0.6 : 0.6), z: 0, spin: 0 }; this.gk = { x: 103.5, y: 34 };
       this.defs = [{ x: 99, y: 29 }, { x: 99, y: 39 }, { x: 96, y: 34 }, { x: 94, y: 27 }, { x: 93, y: 41 }]; this.mates = [{ x: 88, y: 28 }, { x: 90, y: 42 }]; this.me = { x: 88, y: 36 };
@@ -162,8 +184,9 @@
     }
     snap() { return { players: [{ ...this.me, team: 0, me: true, label: 'YOU' }, ...this.mates.map(m => ({ ...m, team: 0 })), { ...this.taker, team: 0, label: 'TAKER' }, { ...this.gk, team: 1, gk: true }, ...this.defs.map(d => ({ ...d, team: 1, label: d === this.marker ? 'MARKER' : '' }))], ball: { x: this.spot.x, y: this.spot.y }, dir: 1, ring: { x: this.spot.x, y: this.spot.y, r: 2.2 } }; }
     feedback(pct) { return this.goals >= 4 ? { face: '🎯', text: 'You time your runs like a pro: start deep, arrive late, attack the ball.' } : this.camp >= 2 ? { face: '🧍', text: 'Stop waiting on the spot — defenders mark you easily. Start deep and sprint in.' } : { face: '🏃', text: 'Go the moment the ring appears. A corner is a race to the ball.' }; }
-    stats() { return [{ k: 'Headers', v: this.goals }, { k: 'Late', v: this.late }, { k: 'Stood still', v: this.camp }]; }
+    stats() { return [{ k: 'Headers', v: this.goals }, { k: 'Late', v: this.late }, { k: 'Rule check', v: (this.rulesRight || 0) + '/1' }]; }
     draw() {
+      if (this.rule) return this.drawRule();
       const P = this.app.pitch; P.drawField();
       if (this.showRing && this.phase !== 'resolve') { const left = this.fl ? Math.max(0, 1 - this.fl.t / this.fl.dur) : 0; P.ring(this.spot.x, this.spot.y, 2.4, '#ffd23f', { width: 4, glow: 'rgba(255,210,63,.35)', dash: [8, 6] }); P.ring(this.spot.x, this.spot.y, 2.4 + left * 6, 'rgba(255,255,255,.55)', { width: 2 }); P.textM(this.spot.x, this.spot.y - 4.5, this.spot.n, '#ffd23f', 1.6); P.textM(this.spot.x, this.spot.y + 4.5, `lands in ${(this.fl ? this.fl.dur - this.fl.t : 0).toFixed(1)} s`, '#fff', 1.4); }
       if (this.phase === 'wait') P.textM(90, 10, 'Start deep… wait for the kick…', '#fff', 2.6); else if (this.phase === 'air') P.textM(90, 10, 'ATTACK THE RING!', '#ffd23f', 2.6);

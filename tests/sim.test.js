@@ -145,5 +145,40 @@ test('a hard pass does not go THROUGH the player it was meant for', () => {
   s.giveBall(passer.i); s.kickPass(passer.i, me.i); s.ball.vx = 24; s.ball.vy = 0; // a rocket, straight at you
   run(s, 1.5, { mx: 0, my: 0 }, 'r'); eq(s.ball.holder, me.i);
 });
+console.log('\nRULE INCIDENTS');
+const seq = (vals) => { let i = 0; return () => vals[Math.min(i++, vals.length - 1)]; };
+test('BACK-PASS: a keeper who receives a kicked pass from a teammate must play it with the feet (quick release)', () => {
+  const s = new MatchSim({ rng }); s.phase = 'play'; const me = s.addHuman('me', 0, 'LCB'), gk = s.players.find(p => p.team === 0 && p.role === 'GK');
+  me.x = 20; me.y = 30; gk.x = 8; gk.y = 34; s.players.filter(p => p.team === 1).forEach((p, i) => { p.x = 80; p.y = 5 + i * 6; });
+  s.giveBall(me.i); s.kickPass(me.i, gk.i); const evs = run(s, 3, { mx: 0, my: 0 });
+  ok(evs.some(e => e.type === 'backpass'), 'backpass event'); ok(s.ball.holder !== gk.i, 'keeper released it quickly');
+});
+test('8-SECOND RULE: a human keeper holding the ball too long gives away a corner', () => {
+  const s = new MatchSim({ rng }); s.phase = 'play'; const gk = s.addHuman('me', 0, 'GK'); gk.x = 6; gk.y = 30; s.giveBall(gk.i);
+  const evs = run(s, 9, { mx: 0, my: 0 }); const e = evs.find(e => e.type === 'eightsec'); ok(e, 'eight-second event');
+  eq(s.msg, 'Corner'); ok(s.players[s.ball.holder].team === 1, 'corner to the other team'); ok(evs.some(e => e.type === 'explain' && e.key === 'eightsec'), 'keeper gets the lesson');
+});
+test('FOUL FROM BEHIND: a tackle from behind can be a foul and a free kick to the fouled team', () => {
+  const s = new MatchSim({ rng }); s.rng = seq([0.01, 0.1]); s.phase = 'play'; const h = s.addHuman('me', 0, 'ST'), q = s.addHuman('d', 1, 'CM');
+  h.x = 60; h.y = 34; h.fx = 1; h.fy = 0; q.x = 59.7; q.y = 34; s.giveBall(h.i); h.holdTime = 1; s.players.filter(p => !p.human).forEach(p => { p.x = p.team ? 95 : 15; });
+  const evs = run(s, 0.5, { mx: 0, my: 0 }, 'd'); const f = evs.find(e => e.type === 'foul'); ok(f && f.by === q.i && !f.penalty, 'foul by the tackler, not a penalty');
+  eq(s.phase, 'restart'); eq(s.players[s.ball.holder].team, 0, 'free kick to blue'); ok(evs.some(e => e.type === 'explain' && e.key === 'foul'), 'tackler gets the lesson');
+});
+test('PENALTY: the same foul inside the defender\u2019s own box is a penalty kick, then a shot', () => {
+  const s = new MatchSim({ rng }); s.rng = seq([0.01, 0.1, 0.5]); s.phase = 'play'; const h = s.addHuman('me', 0, 'ST'), q = s.addHuman('d', 1, 'CM');
+  h.x = 95; h.y = 34; h.fx = 1; h.fy = 0; q.x = 94.7; q.y = 34; s.giveBall(h.i); h.holdTime = 1; s.players.filter(p => !p.human).forEach(p => { p.x = p.team ? 70 : 15; p.y = 10; });
+  const evs = run(s, 0.3, { mx: 0, my: 0 }, 'd'); const f = evs.find(e => e.type === 'foul'); ok(f && f.penalty, 'penalty awarded'); eq(s.phase, 'penalty');
+  const more = run(s, 4, { mx: 0, my: 0 }, 'd'); ok(more.some(e => e.type === 'shot' && e.from === h.i), 'the fouled striker took the kick');
+});
+test('ADVANTAGE: a foul where the attacker keeps the ball lets play go on', () => {
+  const s = new MatchSim({ rng }); s.rng = seq([0.01, 0.4, 0.9]); s.phase = 'play'; const h = s.addHuman('me', 0, 'ST'), q = s.addHuman('d', 1, 'CM');
+  h.x = 60; h.y = 34; h.fx = 1; h.fy = 0; q.x = 59.7; q.y = 34; s.giveBall(h.i); h.holdTime = 1; s.players.filter(p => !p.human).forEach(p => { p.x = p.team ? 95 : 15; });
+  const evs = run(s, 0.2, { mx: 0, my: 0 }, 'd'); ok(evs.some(e => e.type === 'advantage'), 'advantage event'); eq(s.phase, 'play'); eq(s.ball.holder, h.i);
+});
+test('HANDBALL: an AI block with the arm can be an offense (free kick) or not (arm close to the body)', () => {
+  const mk = (r) => { const s = new MatchSim({ rng }); s.rng = seq(r); s.phase = 'play'; const me = s.addHuman('me', 0, 'ST'); me.x = 60; me.y = 34; const red = s.players.find(p => p.team === 1 && p.role === 'CM'); red.x = 72; red.y = 34; s.players.filter(p => p.team === 1 && p !== red).forEach((p, i) => { p.x = 100; p.y = 5 + i * 6; }); s.giveBall(me.i); s.kickShot(me.i); s.ball.vx = 26; s.ball.vy = 0; s.ball.vz = 0; return s; };
+  const s1 = mk([0.5, 0.5, 0.5, 0.5, 0.01, 0.2]); const e1 = run(s1, 1.5).find(e => e.type === 'handball'); ok(e1 && e1.offense, 'handball offense'); eq(s1.phase, 'restart'); eq(s1.players[s1.ball.holder].team, 0, 'free kick to the attackers');
+  const s2 = mk([0.5, 0.5, 0.5, 0.5, 0.01, 0.9]); const e2 = run(s2, 1.5).find(e => e.type === 'handball'); ok(e2 && !e2.offense, 'arm close to the body: no offense');
+});
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

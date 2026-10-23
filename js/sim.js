@@ -29,6 +29,12 @@
     position: { title: 'Goal against — gap in your zone 🕳️', text: (d) => `When the shot was taken you were ${d} m away from your spot. That gap is where the attack came through. Stay with the team shape.`, lesson: 'Keep your shape when defending.' },
     longshot: { title: 'Too far out 🎯', text: (d) => `You shot from ${d} m. From this far the keeper has plenty of time. Get inside the box, or pass to someone closer.`, lesson: 'Shoot from inside 25 m.' },
     crowding: { title: 'Too close together 📏', text: (n) => `You and ${n} were standing almost on top of each other. One defender can mark you BOTH. Spread out to give the passer two options.`, lesson: 'Stay about 10 steps from teammates.' },
+    foul: { title: 'Foul! Tackle from behind 🟨', text: (n) => `You came through ${n} from BEHIND and caught the player before the ball. That is a foul, and a reckless one earns a yellow card. Get goal-side first, then tackle from the side or the front.`, lesson: 'Never tackle from behind.' },
+    penalty: { title: 'Penalty against you ⚠️', text: (n) => `You fouled ${n} from behind INSIDE your own penalty area. Any direct-kick foul in the box is a penalty kick, no matter where the ball was going. Stay on your feet in the box.`, lesson: 'A foul in your own box is a penalty.' },
+    backpass: { title: 'Back-pass rule ⚽🧤', text: () => 'A keeper cannot pick up a ball a teammate deliberately KICKS to them. They have to play it with their feet. If they pick it up: indirect free kick to the other team.', lesson: 'Kicked back-passes cannot be picked up.' },
+    backpassfoul: { title: 'You picked up a back-pass 🧤', text: () => 'A teammate kicked the ball to you and you held it too long. A keeper must play a kicked back-pass with the feet. Indirect free kick to the other team.', lesson: 'Play back-passes with your feet.' },
+    eightsec: { title: '8 seconds! Corner to them ⏱️', text: () => 'A keeper may hold the ball for 8 seconds. The referee counts the last 5 down on their hand. Hold it longer and the other team gets a CORNER KICK (new rule since 2025). Release it fast: throw or kick.', lesson: 'Keeper: release within 8 seconds.' },
+    handball: { title: 'Handball 🖐️', text: (who) => `${who} blocked the ball with an arm held out wide. An arm that makes the body unnaturally bigger is handball even by accident. Arms in, body behind the ball.`, lesson: 'Arms out wide = handball.' },
     offsidepos: { title: 'Standing offside 🚩', text: () => 'You stood in an offside position for a long time while we had the ball. Your teammates cannot pass to you there. Drop back level with the last defender.', lesson: 'Stay level with the last defender.' },
   };
 
@@ -39,7 +45,7 @@
       this.players = [];
       for (const team of [0, 1]) {
         const f = L.formation('433', team === 0 ? 1 : -1);
-        for (const p of f) this.players.push({ i: this.players.length, team, role: p.role, name: p.name, jersey: NAMES[(this.players.length * 7 + 3) % NAMES.length], avatar: randomAvatarData(this.avatarSet, this.rng), home: { ...p.home }, x: p.home.x, y: p.home.y, vx: 0, vy: 0, fx: team === 0 ? 1 : 0, fy: 0, target: { ...p.home }, human: null, hname: null, input: null, kickCool: 0, holdTime: 0, aiTimer: 0, crowdT: 0, offposT: 0, cool: {}, shapeT: 0, shapeGood: 0, stats: { passes: 0, shots: 0, goals: 0, tackles: 0, intercepts: 0, offsides: 0, lost: 0 } });
+        for (const p of f) this.players.push({ i: this.players.length, team, role: p.role, name: p.name, jersey: NAMES[(this.players.length * 7 + 3) % NAMES.length], avatar: randomAvatarData(this.avatarSet, this.rng), home: { ...p.home }, x: p.home.x, y: p.home.y, vx: 0, vy: 0, fx: team === 0 ? 1 : 0, fy: 0, target: { ...p.home }, human: null, hname: null, input: null, kickCool: 0, holdTime: 0, aiTimer: 0, crowdT: 0, offposT: 0, cool: {}, shapeT: 0, shapeGood: 0, stats: { passes: 0, shots: 0, goals: 0, tackles: 0, intercepts: 0, offsides: 0, lost: 0, fouls: 0, cards: 0 } });
       }
       this.ball = { x: F.halfway, y: F.h / 2, z: 0, vx: 0, vy: 0, vz: 0, holder: -1, lastTouch: -1, lastTeam: 0, inFlight: null, flags: [], flagSnap: null };
       this.score = [0, 0]; this.time = 0; this.tick = 0; this.events = []; this.possTeam = 0; this.msg = ''; this.lastShotSnap = null;
@@ -95,6 +101,7 @@
         this.phaseT -= dt;
         if (this.phaseT <= 0) {
           if (this.phase === 'goal') this.resetPositions(this.concededTeam, false);
+          else if (this.phase === 'penalty') { this.takePenalty(); }
           else if (this.phase === 'halftime') { this.switchEnds(); this.resetPositions(1, false); this.msg = 'Second half'; this.emit({ type: 'secondhalf' }); }
           else { this.phase = 'play'; this.msg = ''; this.emit({ type: 'play' }); }
         }
@@ -135,6 +142,7 @@
       const holder = this.ball.holder >= 0 ? this.players[this.ball.holder] : null;
       const frozen = this.phase !== 'play';
       if (frozen && holder === p) {
+        if (p.human && this.phase === 'penalty' && this.wants(p, 'shoot')) { this.takePenalty(); return; }
         if (p.human && (this.phase === 'kickoff' || this.phase === 'restart') && (this.wants(p, 'pass') || this.wants(p, 'shoot'))) { this.phase = 'play'; this.msg = ''; this.emit({ type: 'play' }); }
         else { p.vx = p.vy = 0; return; }
       }
@@ -184,7 +192,7 @@
     gkDecide(p, holder, toward) {
       const b = this.ball, g = this.ownGoal(p.team), d = this.dir(p.team);
       if (this.passive && p.team === 1) return toward({ x: g.x + d * 1.5, y: F.h / 2 }, 2);
-      if (holder === p) { if (p.holdTime > 1.0) this.aiPass(p, true); return { x: 0, y: 0 }; }
+      if (holder === p) { if (p.holdTime > (p.mustKick ? 0.25 : 1.0)) this.aiPass(p, true); return { x: 0, y: 0 }; }
       // shot coming? move to where it will cross
       if (b.inFlight && b.inFlight.kind === 'shot' && b.inFlight.team !== p.team && Math.sign(b.vx) === -d && Math.hypot(b.vx, b.vy) > 8 && (b.inFlight.t || 0) > 0.33) { // keepers need a moment to react
         const tcross = (g.x - b.x) / b.vx; if (tcross > 0 && tcross < 2.5) { const yAt = b.y + b.vy * tcross; return toward({ x: g.x + d * 1.2, y: clamp(yAt, F.h / 2 - 5, F.h / 2 + 5) }, 6.5); }
@@ -240,7 +248,7 @@
       if (r) this.kickPass(p.i, r.i); else this.kickLoose(p.i, { x: this.dir(p.team), y: (this.rng() - 0.5) }, isGK ? 22 : 14);
     }
     beginFlight(p, kind, extra) {
-      this.ball.holder = -1; this.ball.lastTouch = p.i; this.ball.lastTeam = p.team; p.kickCool = 0.5; p.holdTime = 0; p.aiTimer = 0;
+      p.mustKick = false; this.ball.holder = -1; this.ball.lastTouch = p.i; this.ball.lastTeam = p.team; p.kickCool = 0.5; p.holdTime = 0; p.aiTimer = 0;
       this.ball.inFlight = { kind, team: p.team, from: p.i, ...extra };
     }
     recordOffsideFlags(p) { // who is in an offside position at the moment of the kick?
@@ -278,10 +286,20 @@
       const b = this.ball;
       if (b.holder >= 0) {
         const h = this.players[b.holder]; h.holdTime += dt; b.x = h.x + h.fx * 0.7; b.y = h.y + h.fy * 0.7; b.z = 0;
+        if (h.role === 'GK' && h.human) {
+          if (h.mustKick && h.holdTime > 1.5) { this.explain(h, 'backpassfoul', '', this.snapAround(h)); this.emit({ type: 'backpassfoul', gk: h.i }); this.freeKickTo(1 - h.team, b.x, b.y, 'Indirect free kick'); return; }
+          if (!h.mustKick && h.holdTime > 8) { h.stats.fouls++; this.explain(h, 'eightsec', '', this.snapAround(h)); this.emit({ type: 'eightsec', gk: h.i }); this.cornerTo(1 - h.team, b.y); return; }
+        }
         // tackles
         if (h.holdTime > 0.45 && h.role !== 'GK' && !this.passive) for (const q of this.teamPlayers(1 - h.team)) { // keepers holding the ball are protected
           if (q.kickCool > 0 || dist(q, b) > 1.15) continue;
           if (this.rng() < 1 - Math.exp(-3 * dt)) {
+            const behind = ((q.x - h.x) * h.fx + (q.y - h.y) * h.fy) < -0.2; // tackler is behind the carrier
+            if (behind) {
+              const r = this.rng();
+              if (r < 0.35) { this.foul(q, h); return; }
+              if (r < 0.5) { q.kickCool = 0.8; this.emit({ type: 'advantage', on: h.i, by: q.i }); this.flagCheckCrowding(dt); return; }
+            }
             const held = h.holdTime.toFixed(1); h.stats.lost++; q.stats.tackles++;
             this.explain(h, 'tackled', held, this.snapAround(h, { labels: { [q.i]: 'TACKLER' } }));
             this.giveBall(q.i); q.kickCool = 0; this.emit({ type: 'tackle', by: q.i, from: h.i }); this.flagCheckCrowding(dt); return;
@@ -304,6 +322,13 @@
       for (const p of this.players) { if (p.kickCool > 0) continue; const r = p.role === 'GK' ? (fast ? 0.95 : 1.6) : p.i === intended ? 1.4 : (fast ? 0.65 : 1.15); const d = dist(p, b); if (d < r && d < bd && b.z < 2.3) { bd = d; best = p; } }
       if (best) {
         const spd = Math.hypot(b.vx, b.vy);
+        if (!best.human && best.role !== 'GK' && b.inFlight && b.inFlight.team !== best.team && spd > 15 && this.rng() < 0.06) {
+          // the ball struck the blocker's arm: an offense if the arm was out wide, play on if it was tucked in
+          const offense = this.rng() < 0.5; const kicker = this.players[b.inFlight.from];
+          this.emit({ type: 'handball', by: best.i, offense, from: kicker.i });
+          if (offense) { best.stats.fouls++; this.freeKickTo(kicker.team, b.x, b.y, 'Handball'); return; }
+          b.vx *= -0.3; b.vy = (this.rng() - 0.5) * 6; best.kickCool = 0.5; this.flagCheckCrowding(dt); return;
+        }
         if (best.role === 'GK' && b.inFlight && b.inFlight.kind === 'shot' && spd > 20 && Math.abs(b.y - best.y) > 0.45 && this.rng() < 0.65) {
           // PARRY: the keeper gets a hand to it but cannot hold it
           const d = this.dir(best.team); b.vx = d * (6 + this.rng() * 6); b.vy = (b.y > best.y ? 1 : -1) * (5 + this.rng() * 6); b.vz = 2; b.z = 0.3; b.inFlight = null; best.kickCool = 0.6;
@@ -331,6 +356,40 @@
       taker.x = b.x - taker.fx * 0.7; taker.y = b.y - taker.fy * 0.7; this.giveBall(taker.i); b.inFlight = null; b.flags = [];
       this.phase = 'restart'; this.phaseT = 1.2; this.msg = kind; this.emit({ type: 'out', kind, team: other });
     }
+    freeKickTo(team, x, y, label) {
+      const b = this.ball; b.inFlight = null; b.flags = []; b.vx = b.vy = b.vz = b.z = 0; b.x = clamp(x, 1, F.w - 1); b.y = clamp(y, 1, F.h - 1);
+      let taker = null, td = 99; for (const p of this.teamPlayers(team)) { if (p.role === 'GK') continue; const d = dist(p, b); if (d < td) { td = d; taker = p; } }
+      taker.x = b.x - this.dir(team) * 0.8; taker.y = b.y; this.giveBall(taker.i); this.phase = 'restart'; this.phaseT = 1.6; this.msg = label || 'Free kick';
+    }
+    cornerTo(team, nearY) {
+      const b = this.ball, g = this.goalOf(team); b.inFlight = null; b.flags = []; b.vx = b.vy = b.vz = b.z = 0; b.x = g.x === F.w ? F.w - 0.5 : 0.5; b.y = nearY < F.h / 2 ? 0.5 : F.h - 0.5;
+      let taker = null, td = 99; for (const p of this.teamPlayers(team)) { if (p.role === 'GK') continue; const d = dist(p, b); if (d < td) { td = d; taker = p; } }
+      taker.x = b.x - this.dir(team) * 0.8; taker.y = b.y; this.giveBall(taker.i); this.phase = 'restart'; this.phaseT = 1.6; this.msg = 'Corner'; this.emit({ type: 'out', kind: 'Corner', team });
+    }
+    foul(q, h) { // q fouled h (the ball carrier) from behind
+      q.stats.fouls++; const card = q.stats.fouls >= 2 && !q.carded ? 'yellow' : null; if (card) { q.carded = true; q.stats.cards++; }
+      const g = this.goalOf(h.team), inBox = Math.abs(h.x - g.x) < 16.5 && Math.abs(h.y - F.h / 2) < 20.16;
+      const b = this.ball; b.inFlight = null; b.flags = [];
+      if (inBox) {
+        this.explain(q, 'penalty', h.hname || h.jersey, this.snapAround(q, { labels: { [h.i]: 'FOULED' } }));
+        this.emit({ type: 'foul', by: q.i, on: h.i, penalty: true, card });
+        const spot = { x: g.x === F.w ? F.w - 11 : 11, y: F.h / 2 };
+        const human = this.teamPlayers(h.team).find(p => p.human && p.role !== 'GK'); this.penaltyTaker = human ? human.i : h.i; const t = this.players[this.penaltyTaker];
+        t.x = spot.x - this.dir(h.team) * 1.5; t.y = spot.y; t.fx = this.dir(h.team); t.fy = 0; this.giveBall(t.i); b.x = spot.x; b.y = spot.y;
+        const gk = this.players.find(p => p.team !== h.team && p.role === 'GK'); gk.x = g.x === F.w ? F.w - 0.8 : 0.8; gk.y = F.h / 2;
+        this.phase = 'penalty'; this.phaseT = 4; this.msg = 'PENALTY!';
+      } else {
+        this.explain(q, 'foul', h.hname || h.jersey, this.snapAround(q, { labels: { [h.i]: 'FOULED' } }));
+        this.emit({ type: 'foul', by: q.i, on: h.i, penalty: false, card });
+        this.freeKickTo(h.team, b.x, b.y, 'Free kick');
+      }
+    }
+    takePenalty() {
+      const t = this.players[this.penaltyTaker]; if (!t) { this.phase = 'play'; return; }
+      this.phase = 'play'; this.msg = ''; this.giveBall(t.i); this.kickShot(t.i);
+      const g = this.goalOf(t.team), dx = g.x - this.ball.x, dy = (F.h / 2 + (this.rng() < 0.5 ? -2.8 : 2.8)) - this.ball.y, n = Math.hypot(dx, dy) || 1; this.ball.vx = dx / n * 30; this.ball.vy = dy / n * 30; this.ball.vz = 1.5;
+      this.emit({ type: 'play' });
+    }
     pickup(p) {
       const b = this.ball, f = b.inFlight;
       if (f && f.kind === 'pass' && f.team !== p.team) {
@@ -347,6 +406,9 @@
         let taker = null, td = 99; for (const q of this.teamPlayers(1 - p.team)) { if (q.role === 'GK') continue; const d = dist(q, b); if (d < td) { td = d; taker = q; } }
         taker.x = b.x - this.dir(taker.team) * 0.7; taker.y = b.y; this.giveBall(taker.i); b.flags = [];
         this.phase = 'restart'; this.phaseT = 1.8; this.msg = 'Offside!'; return;
+      } else if (f && f.kind === 'pass' && f.team === p.team && p.role === 'GK' && this.players[f.from].role !== 'GK') {
+        // back-pass: the keeper may not pick this up, so they must release it with the feet at once
+        p.mustKick = true; this.emit({ type: 'backpass', gk: p.i, from: f.from }); if (this.players[f.from].human) this.explain(this.players[f.from], 'backpass', '', this.snapAround(this.players[f.from], { labels: { [p.i]: 'KEEPER' } }));
       } else if (f && f.kind === 'shot' && p.role === 'GK' && f.team !== p.team) { this.emit({ type: 'save', by: p.i }); }
       else if (f && f.kind === 'pass' && f.team === p.team) { this.emit({ type: 'receive', by: p.i, from: f.from }); }
       this.giveBall(p.i); b.flags = [];
@@ -368,7 +430,7 @@
     // ---------- network snapshot ----------
     snapshot() {
       const r1 = v => Math.round(v * 10) / 10;
-      return { t: r1(this.time), ph: this.phase, hf: this.half, sc: this.score, poss: this.possTeam, msg: this.msg, h: this.ball.holder,
+      return { t: r1(this.time), ph: this.phase, hf: this.half, sc: this.score, poss: this.possTeam, msg: this.msg, h: this.ball.holder, ht: this.ball.holder >= 0 ? r1(this.players[this.ball.holder].holdTime) : 0, mk: this.ball.holder >= 0 && this.players[this.ball.holder].mustKick ? 1 : 0,
         p: this.players.map(p => [r1(p.x), r1(p.y)]), tg: this.players.map(p => [r1(p.target.x), r1(p.target.y)]),
         b: [r1(this.ball.x), r1(this.ball.y), r1(this.ball.z), r1(this.ball.vx), r1(this.ball.vy)], fl: this.ball.flags, ifk: this.ball.inFlight ? this.ball.inFlight.kind : '' };
     }

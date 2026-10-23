@@ -57,6 +57,22 @@ AI players get random avatars from the same set. Online, everyone sees everyone'
 
 **Full field** (default) or **Follow the ball** (zoomed in, follows the action). Toggle with **Z**, the camera button in the match, or in the avatar screen.
 
+## The rules that confuse everyone (built into every mode)
+
+One shared **rule library** (32 cards) covers the Laws people argue about: offside exceptions, handball, the keeper's
+back-pass and 8-second rules, throw-ins, corners and goal kicks, fouls, cards, advantage, and "the whole ball".
+It plugs into the modes you already play, so there is no separate "rules mode":
+
+- **Match:** real incidents happen in play. Tackles from behind can be fouls (free kick, yellow card) or a **penalty** inside the box.
+  Sometimes the referee plays **advantage**. Blocks can be **handball** (arm out wide) or not (arm tucked in). A kicked **back-pass**
+  must be played with the keeper's feet. A human keeper who holds the ball over **8 seconds** gives away a corner (2025/26 rule).
+  Each incident gets a whistle, a banner and a coach explainer. **Halftime** asks one "Ref's call" question.
+- **Drills:** Throw-in Thinking, Press vs Drop and Corner Attack each include a "Rule check" round from the library, matched to the drill.
+- **Offside trainers:** round 4 of Striker Timing is a **throw-in** (no offside, go as deep as you like); round 4 of Defender Trap is a
+  **goal kick** (the trap cannot work, so drop and cover). The live checklist shows the exception.
+- **Rule book** (menu): every rule in plain words, a ✓ for the ones you have answered right, and a 5-question quiz. Your **Ref IQ**
+  shows on results and report cards.
+
 ## "What went wrong?" popups
 
 The coach pops up (with a mini-map of that moment) when you:

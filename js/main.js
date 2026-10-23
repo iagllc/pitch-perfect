@@ -53,7 +53,8 @@
     setPossession(t) { el.possChip.style.display = t === null ? 'none' : ''; if (t) { el.possChip.className = 'chip possession ' + t; el.poss.textContent = t === 'us' ? 'WE have it — spread!' : 'THEY have it — squeeze!'; } },
     showScoreboard(on) { el.board.style.display = on ? '' : 'none'; el.scoreChip.style.display = on ? 'none' : ''; el.timerChip.style.display = on ? 'none' : ''; },
     setScoreboard(sc, t, dur) { const left = Math.max(0, Math.ceil((dur || 240) - t)); $('#sbBlue').textContent = sc[0]; $('#sbRed').textContent = sc[1]; $('#sbClock').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; $('#sbClock').classList.toggle('hurry', left <= 15); },
-    setRules(r) { el.rules.style.display = r ? '' : 'none'; if (!r) return; const set = (id, on) => { const row = $('#' + id); row.classList.toggle('yes', on); row.querySelector('.mark').textContent = on ? '✓' : '✗'; }; set('r1', r.half); set('r2', r.ball); set('r3', r.line); const v = $('#rv'); v.textContent = r.offside ? '= OFFSIDE POSITION 🚩' : '= ONSIDE ✓'; v.className = 'rule-verdict ' + (r.offside ? 'bad' : 'good'); $('#rpTitle').innerHTML = r.who === 'Striker' ? 'Is the <span>striker</span> offside right now?' : 'Are <span>you</span> offside right now?'; },
+    setRules(r) { el.rules.style.display = r ? '' : 'none'; if (!r) return; const set = (id, on) => { const row = $('#' + id); row.classList.toggle('yes', on); row.querySelector('.mark').textContent = on ? '✓' : '✗'; }; set('r1', r.half); set('r2', r.ball); set('r3', r.line); const r4 = $('#r4'); r4.style.display = r.exception ? '' : 'none'; if (r.exception) { r4.classList.add('yes'); r4.querySelector('.mark').textContent = '✓'; r4.style.background = 'rgba(182,255,59,.15)'; r4.querySelector('.mark').style.background = '#b6ff3b'; r4.querySelector('.mark').style.color = '#06101f'; }
+      const v = $('#rv'); v.textContent = r.exception ? '= NO OFFSIDE POSSIBLE ✓' : r.offside ? '= OFFSIDE POSITION 🚩' : '= ONSIDE ✓'; v.className = 'rule-verdict ' + (r.offside ? 'bad' : 'good'); $('#rpTitle').innerHTML = r.who === 'Striker' ? 'Is the <span>striker</span> offside right now?' : 'Are <span>you</span> offside right now?'; },
     coach(text, kind) { el.coachText.textContent = text; el.bubble.className = 'bubble ' + (kind || 'info'); void el.bubble.offsetWidth; el.bubble.classList.add('flash'); },
     verdict(word, why, kind) { el.verdict.className = 'show ' + kind; el.verdict.querySelector('.word').textContent = word; el.verdict.querySelector('.why').textContent = why; },
     hideVerdict() { el.verdict.className = ''; },
@@ -69,8 +70,10 @@
         ${bar(st.shots[0] * 10, st.shots[1] * 10, st.shots[0], st.shots[1])}<div class="hlabel">shots</div>
         ${bar(st.passes[0], st.passes[1], st.passes[0], st.passes[1])}<div class="hlabel">passes</div>
         ${report ? `<div class="feedback"><div class="face">🧢</div><div>You (${mine}): ${report.shape}% in position so far, ${report.passes} passes, ${report.shots} shots. ${report.shape >= 60 ? 'Great shape — keep it up!' : 'Second half: stay in your ring more.'}</div></div>` : ''}
+        <div class="refcall" id="refCall"></div>
         <p>Teams switch ends. Second half starts in a moment…</p><div class="actions"><button class="btn ghost" id="htClose">OK</button></div></div>`;
       ov.classList.add('active'); $('#htClose').onclick = $('#htX').onclick = () => this.hideHalftime();
+      renderRefCall($('#refCall'), Rules.pick(null, 1)[0]);
     },
     hideHalftime() { $('#halftime').classList.remove('active'); },
   };
@@ -119,6 +122,21 @@
   }
   function renderMenuAvatar() { const cv = $('#menuAvatar'); if (!cv) return; const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); const a = window.__myAvatar; Avatars.drawPortrait(c, 40, a.set === 'teen' ? 92 : 62, a.set === 'teen' ? 80 : 90, a, 'us', { number: 10 }); $('#menuAvatarName').textContent = settings.name ? settings.name : 'Your player'; $('#menuAvatarSet').textContent = a.set === 'teen' ? 'Teen+ set' : 'Kids set'; renderCamera(); }
   function renderCamera() { document.querySelectorAll('.camBtn').forEach(b => { b.textContent = settings.camera === 'follow' ? '🎥 Camera: follow ball' : '🎥 Camera: full field'; b.title = 'Switch camera (Z key)'; }); }
+
+  // ---------- Ref's call (one rule question, inline) ----------
+  function renderRefCall(box, card, onDone) {
+    if (!box || !card) return;
+    box.innerHTML = `<div class="rc-kicker">🧑‍⚖️ REF'S CALL</div><div class="rc-q">${card.q}</div><div class="rc-a">${card.a.map((a, i) => `<button class="btn ghost small" data-i="${i}">${a}</button>`).join('')}</div>`;
+    box.querySelectorAll('button').forEach(b => b.onclick = () => { const right = +b.dataset.i === card.ok; Rules.record(card.id, right); app.sfx[right ? 'good' : 'bad'](); box.querySelectorAll('button').forEach(x => { x.disabled = true; if (+x.dataset.i === card.ok) x.classList.add('right'); else if (x === b) x.classList.add('wrong'); }); const w = document.createElement('div'); w.className = 'rc-why ' + (right ? 'good' : 'bad'); w.textContent = (right ? '✓ Correct. ' : '✗ Not quite. ') + card.why; box.appendChild(w); onDone && onDone(right); });
+  }
+  // ---------- rule book screen ----------
+  function openRules() {
+    app.sfx.unlock(); app.sfx.pop(); const el2 = $('#rulesUI'); const prog = Rules.progress, iq = Rules.refIQ();
+    const groups = Object.entries(Rules.TAGS).map(([tag, label]) => `<div class="rb-group"><h3>${label}</h3>${Rules.RULES.filter(r => r.tag === tag).map(r => { const p = prog[r.id]; const st = p ? (p.right > 0 ? 'known' : 'missed') : 'new'; return `<details class="rb-rule ${st}"><summary><span class="rb-mark">${st === 'known' ? '✓' : st === 'missed' ? '!' : '·'}</span>${r.title}</summary><p>${r.why}</p><p class="rb-lesson">💡 ${r.lesson}</p></details>`; }).join('')}</div>`).join('');
+    el2.innerHTML = `<div class="rb-head"><div><b>${Rules.learned()}</b> of ${Rules.RULES.length} rules learned${iq !== null ? ` · Ref IQ <b>${iq}%</b>` : ''}</div><button class="btn big" id="rbQuiz">🧑‍⚖️ Quiz me (5)</button></div><div id="rbQuizBox"></div><div class="rb-groups">${groups}</div>`;
+    $('#rbQuiz').onclick = () => { const cards = Rules.pick(null, 5); let i = 0, right = 0; const box = $('#rbQuizBox'); const next = () => { if (i >= cards.length) { box.innerHTML = `<div class="refcall"><div class="rc-kicker">RESULT</div><div class="rc-q">${right} of ${cards.length} correct${right === cards.length ? ' — perfect! 🏆' : ''}</div><div class="rc-a"><button class="btn small" id="rbAgain">Again</button></div></div>`; $('#rbAgain').onclick = () => openRules(); return; } box.innerHTML = `<div class="refcall"><div class="rc-count">${i + 1} / ${cards.length}</div></div>`; const inner = box.firstChild; const card = cards[i++]; renderRefCall(inner, card, ok => { if (ok) right++; const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Next ▶'; b.style.marginTop = '10px'; b.onclick = next; inner.appendChild(b); }); }; next(); };
+    show($('#rules'));
+  }
 
   // ---------- screens ----------
   function show(screen) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); screen.classList.add('active'); updateRotate(); }
@@ -254,7 +272,7 @@
     document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => b.dataset.mode === 'online' ? openOnline() : openTutorial(b.dataset.mode));
     el.muteBtns.forEach(b => b.onclick = toggleMute); renderMute();
     document.querySelectorAll('.camBtn').forEach(b => b.onclick = () => app.toggleCamera()); renderCamera();
-    $('#menuAvatarBtn').onclick = () => openAvatar('menu'); $('#lobbyAvatarBtn').onclick = () => openAvatar('lobby'); $('#avBack').onclick = () => show(avReturn === 'lobby' ? el.lobby : el.menu); renderMenuAvatar();
+    $('#menuAvatarBtn').onclick = () => openAvatar('menu'); $('#menuRulesBtn').onclick = openRules; $('#rulesBack').onclick = () => show(el.menu); $('#lobbyAvatarBtn').onclick = () => openAvatar('lobby'); $('#avBack').onclick = () => show(avReturn === 'lobby' ? el.lobby : el.menu); renderMenuAvatar();
     $('#lobbyCreate').onclick = () => joinRoom(null); lob.join.onclick = () => joinRoom(lob.codeIn.value.trim().toUpperCase());
     lob.start.onclick = () => app.net && app.net.send({ t: 'start' });
     $('#lobbyBack').onclick = leaveToMenu; $('#lobbyCopy').onclick = () => { try { navigator.clipboard.writeText(lob.link.href); app.toast('Link copied!'); } catch (e) {} };

@@ -9,7 +9,7 @@
     't-through': 'Defender Trap drill: 5 traps in a row.', 't-half': 'Defender Trap drill: keep your line in your own half.', rolledpast: 'Move toward every pass meant for you.', 'drill-roll': 'Attack the ball when it is passed to you.',
     'throw-marked': 'Throw-in drill: throw to the player with space around him.', 'press-wrong': 'Press vs Drop drill: look at where the carrier is FACING.', 'drop-wrong': 'Press vs Drop drill: press when your team is set behind you.', 'corner-late': 'Corner drill: start deep, arrive as the ball arrives.', 'corner-camp': 'Corner drill: never stand still in the box.',
   };
-  const DEFAULTS = ['Play one match as a defender to feel the offside trap.', 'Try the Corner drill: start deep, arrive late.', 'Beat your best "in position" score in Shape Shift.'];
+  const DEFAULTS = ['Open the Rule book and take the 5-question quiz.', 'Play one match as a defender to feel the offside trap.', 'Try the Corner drill: start deep, arrive late.', 'Beat your best "in position" score in Shape Shift.'];
   const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   const Report = {

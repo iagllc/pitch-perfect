@@ -24,7 +24,7 @@
     rulesNow() { // the three offside questions, answered live
       const a = this.variant === 'attack' ? this.me : this.striker, xs = this.defs.concat([this.gk]).map(o => o.x).sort((p, q) => q - p);
       const half = a.x > F.halfway, ball = a.x > this.ball.x, line = a.x > xs[1] + 0.05;
-      return { half, ball, line, offside: half && ball && line, who: this.variant === 'attack' ? 'You' : 'Striker', lineX: Math.max(xs[1], F.halfway) };
+      const exception = !!this.special; return { half, ball, line, exception, offside: half && ball && line && !exception, who: this.variant === 'attack' ? 'You' : 'Striker', lineX: Math.max(xs[1], F.halfway) };
     }
     snapNow(extra) {
       const att = this.variant === 'attack' ? this.me : this.striker, atk = this.variant === 'attack';
@@ -37,6 +37,7 @@
       if (this.round > ROUNDS) return this.finish();
       this.app.setTimerText(`Round ${this.round}/${ROUNDS}`);
       this.phase = 'play'; this.playT = 0; this.verdict = null; this.flight = null; this.app.hideVerdict();
+      this.special = this.round === 4 ? (this.variant === 'attack' ? 'throwin' : 'goalkick') : null;
       const lineX = rnd(68, 78);
       this.defs = DEF_Y.map(y => ({ x: lineX, y: y + rnd(-1, 1) }));
       this.gk = { x: 101.5, y: 34 };
@@ -44,12 +45,14 @@
       this.ball = { x: this.passer.x + 0.8, y: this.passer.y, z: 0, spin: 0 };
       if (this.variant === 'attack') {
         this.me = { x: lineX - rnd(6, 10), y: rnd(20, 48) };
+        if (this.special === 'throwin') { this.passer = { x: lineX - 6, y: -0.6, wind: 0, phase: 0 }; this.ball = { x: this.passer.x, y: this.passer.y, z: 1.6, spin: 0 }; this.me.y = rnd(10, 24); this.app.coach('THROW-IN! There is NO offside from a throw-in. Go as deep as you like, then call for it.', 'info'); }
         this.wingers = [{ x: lineX - 4, y: 8 }, { x: lineX - 4, y: 60 }];
         this.lineTarget = lineX; this.lineTimer = rnd(1, 2); this.patience = rnd(9, 13);
         this.app.showPass(true);
       } else {
         this.lineX = lineX; this.defs.forEach(d => d.x = lineX);
         this.striker = { x: lineX - rnd(2, 5), y: rnd(22, 46), runSpeed: 0, running: false };
+        if (this.special === 'goalkick') { this.passer = { x: 6, y: 34, wind: 0, phase: 0 }; this.ball = { x: 7, y: 34, z: 0, spin: 0 }; this.kickIn = rnd(2.5, 4); this.earlyRun = true; this.runLead = rnd(0.6, 1.2); this.app.coach('GOAL KICK coming. No offside from a goal kick, so the trap cannot work. DROP and cover the striker!', 'info'); }
         this.decoys = [{ x: lineX - 6, y: 8 }, { x: lineX - 6, y: 60 }];
         this.kickIn = rnd(3.5, 7); this.windup = 0.9; this.earlyRun = Math.random() < 0.5; this.runLead = this.earlyRun ? rnd(0.35, 0.8) : rnd(-0.05, 0.1);
         this.app.showPass(false);
@@ -77,7 +80,15 @@
       this.verdict = v; this.phase = 'freeze'; this.freezeT = 0; this.app.showPass(false); this.app.sfx.kick(); this.app.fx.kick(0.3);
       const m = v.margin, mTxt = Math.abs(m).toFixed(1) + ' m';
       let word, why, kind, pts = 0;
-      if (this.variant === 'attack') {
+      if (this.special === 'throwin') {
+        const past = v.offside; Rules.record('off-throwin', true); this.verdict = { ...v, offside: false, reason: 'throw-in' };
+        if (past) { word = 'NO OFFSIDE FROM A THROW-IN ✓'; kind = 'good'; why = `You were ${mTxt} past the line, and it does not matter: throw-ins have no offside. +150`; pts = 150; this.sharp++; this.outcome = 'goal'; }
+        else { word = 'ONSIDE ✓ (throw-in)'; kind = 'meh'; why = 'Fine, but you could have gone even deeper: there is NO offside from a throw-in. +80'; pts = 80; this.outcome = 'goal'; this.explainAfter = { key: 'off-throwin', title: 'No offside from a throw-in', text: 'You stayed behind the defenders out of habit. On a throw-in (and goal kicks and corners) the offside rule is switched off, so you can wait behind the whole defense. Use it!', lesson: 'Throw-in, goal kick, corner: no offside.' }; }
+      } else if (this.special === 'goalkick') {
+        Rules.record('off-goalkick', m >= 2.5); this.verdict = { ...v, offside: false, reason: 'goal kick' };
+        if (m >= 2.5) { word = 'COVERED ✓ (no offside on a goal kick)'; kind = 'good'; why = `You dropped and kept ${mTxt} of cover. Right call: the trap cannot work on a goal kick. +150`; pts = 150; this.covered++; this.outcome = 'covered'; }
+        else { word = 'HE\u2019S THROUGH — NO OFFSIDE ✗'; kind = 'bad'; why = 'You stepped up, but there is no offside from a goal kick. The striker is clean through.'; this.outcome = 'conceded'; this.explainAfter = { key: 'off-goalkick', title: 'No offside from a goal kick', text: 'On a goal kick (and corners and throw-ins) the offside rule is switched off, so stepping up does nothing. Drop, stay goal-side of the striker, and cover.', lesson: 'Never try the trap on a goal kick.' }; }
+      } else if (this.variant === 'attack') {
         if (v.offside) { word = 'OFFSIDE!'; kind = 'bad'; why = `You were ${mTxt} past the last defender when the ball was kicked. Wait a split second longer!`; this.offsides++; this.outcome = 'flag'; }
         else if (v.reason === 'behind-ball') { word = 'ONSIDE ✓'; kind = 'good'; why = 'You were behind the BALL — you can never be offside there! +100'; pts = 100; this.outcome = 'goal'; }
         else if (v.reason === 'own-half') { word = 'ONSIDE ✓'; kind = 'meh'; why = "In your own half you can't be offside… but that is a long way from goal. +30"; pts = 30; this.outcome = 'pass'; }
@@ -93,8 +104,9 @@
         else { word = 'COVERED ✓'; kind = 'good'; why = `Striker was ${mTxt} behind your line — onside, but your defender gets there first. +60`; pts = 60; this.covered++; this.outcome = 'covered'; }
       }
       if (this.outcome === 'conceded') this.conceded++;
-      this.pending = pts;
+      this.pending = pts; this.pendingWord = word;
       const R = this.rulesNow(), snap = this.snapNow({ lineX: R.lineX, arrows: [{ from: { x: this.passer.x, y: this.passer.y }, to: { x: attacker.x, y: attacker.y } }] });
+      if (this.special) { this.app.verdict(word, why, kind); if (this.outcome === 'flag') this.app.sfx.whistle(); else if (kind === 'good') this.app.sfx.good(); else this.app.sfx.bad(); return; }
       const checklist = `At the kick: ${R.half ? '✓' : '✗'} other half · ${R.ball ? '✓' : '✗'} ahead of the ball · ${R.line ? '✓' : '✗'} past the 2nd-last defender.`;
       if (this.variant === 'attack') {
         if (v.offside) this.explainAfter = { key: 't-off', title: 'Offside! 🚩', text: `${checklist} All three were true, so the flag went up — you were ${mTxt} past the line when the ball was kicked. Hover ON the line and go the instant the ball is played.`, lesson: 'Start your run when the ball is kicked, not before.', snap };
@@ -138,8 +150,7 @@
 
     updatePlay(dt) {
       this.playT += dt;
-      this.passer.phase += dt; this.passer.y += Math.sin(this.passer.phase) * 1.2 * dt; this.passer.x += Math.cos(this.passer.phase * 0.7) * 0.6 * dt;
-      this.ball.x = this.passer.x + 0.8; this.ball.y = this.passer.y + 0.3;
+      if (!this.special) { this.passer.phase += dt; this.passer.y += Math.sin(this.passer.phase) * 1.2 * dt; this.passer.x += Math.cos(this.passer.phase * 0.7) * 0.6 * dt; this.ball.x = this.passer.x + 0.8; this.ball.y = this.passer.y + 0.3; }
       if (this.variant === 'attack') {
         // defenders' line wanders, sometimes steps up fast
         this.lineTimer -= dt;
@@ -230,7 +241,7 @@
       if (this.verdict && this.phase !== 'play') {
         c.fillStyle = 'rgba(0,0,20,.35)'; c.fillRect(0, 0, P.cssW, P.cssH);
         const col = this.verdict.offside ? '#ff5a5a' : '#b6ff3b';
-        P.vline(this.verdict.lineX, col, 4, [12, 8], 'OFFSIDE LINE');
+        P.vline(this.verdict.lineX, col, 4, [12, 8], this.special ? 'NO OFFSIDE (' + (this.special === 'throwin' ? 'throw-in' : 'goal kick') + ')' : 'OFFSIDE LINE');
         const y = attacker.y + 3.2; P.line({ x: attacker.x, y }, { x: this.verdict.lineX, y }, '#fff', 2, [4, 4]);
         P.textM((attacker.x + this.verdict.lineX) / 2, y + 1.8, Math.abs(this.verdict.margin).toFixed(1) + ' m', '#fff', 1.6);
         // assistant referee flag

@@ -435,3 +435,23 @@ html[data-theme="kid"] .av-grid canvas { border: 3px solid rgba(255,255,255,.3);
 #rotate .phone { font-size: 64px; display: inline-block; animation: rotatePhone 1.6s ease-in-out infinite; }
 @keyframes rotatePhone { 0%, 20% { transform: rotate(0) } 60%, 100% { transform: rotate(-90deg) } }
 #rotate h2 { margin: 12px 0 6px; font-size: 26px; } #rotate p { color: var(--muted); margin: 0 0 18px; }
+
+/* ---------- rules: ref's call + rule book ---------- */
+.refcall { margin-top: 14px; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; text-align: left; }
+.rc-kicker { font-size: 11px; letter-spacing: 2px; color: var(--gold); font-weight: 700; } .rc-count { font-size: 12px; color: var(--muted); font-weight: 700; }
+.rc-q { font-weight: 700; font-size: 16px; margin: 6px 0 10px; }
+.rc-a { display: flex; flex-direction: column; gap: 6px; } .rc-a .btn { text-align: left; justify-content: flex-start; }
+.rc-a .btn.right { background: rgba(182,255,59,.25); border-color: var(--lime); color: var(--text); } .rc-a .btn.wrong { background: rgba(255,90,90,.25); border-color: var(--red); color: var(--text); }
+.rc-why { margin-top: 10px; font-size: 14px; line-height: 1.4; padding: 10px 12px; border-radius: 12px; }
+.rc-why.good { background: rgba(182,255,59,.12); border: 1px solid rgba(182,255,59,.4); } .rc-why.bad { background: rgba(255,90,90,.12); border: 1px solid rgba(255,90,90,.4); }
+#rules { flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; overflow: auto; }
+#lobby, #avatar { flex-direction: column; justify-content: flex-start; }
+.rb-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 15px; color: var(--muted); } .rb-head b { color: var(--text); font-size: 20px; }
+.rb-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+.rb-group h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); }
+.rb-rule { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; margin-bottom: 6px; }
+.rb-rule summary { cursor: pointer; font-weight: 700; display: flex; gap: 10px; align-items: center; list-style: none; } .rb-rule summary::-webkit-details-marker { display: none; }
+.rb-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.1); color: var(--muted); font-size: 13px; flex: none; }
+.rb-rule.known .rb-mark { background: var(--lime); color: #06101f; } .rb-rule.missed .rb-mark { background: var(--red); color: #fff; }
+.rb-rule p { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.4; } .rb-lesson { color: var(--text) !important; font-weight: 700; }
+.rule-check { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
