@@ -112,4 +112,9 @@ The match engine in `js/sim.js` runs identically in the browser (solo) and on th
 
 ```bash
 npm test      # offside rule, team-shape math, scoring, and the match engine (goals, halves, passes, saves, offside calls…)
+
+npm i -D playwright && npx playwright install chromium   # once
+npm run test:browser                                      # headless Chromium: a "tackle bot" plays a real match and proves the
+                                                          # FOUL / PENALTY! / ADVANTAGE popups fire, with zero console errors
+URL=https://your-site.onrender.com npm run test:browser   # same test against a deployed site
 ```

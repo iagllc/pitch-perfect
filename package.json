@@ -7,7 +7,8 @@
   "engines": { "node": ">=18" },
   "scripts": {
     "start": "node server/server.js",
-    "test": "node tests/logic.test.js && node tests/sim.test.js"
+    "test": "node tests/logic.test.js && node tests/sim.test.js",
+    "test:browser": "node tests/smoke.browser.js"
   },
   "dependencies": {
     "ws": "^8.18.3"
