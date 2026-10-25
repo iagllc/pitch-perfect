@@ -29,6 +29,7 @@
       document.documentElement.toggleAttribute('data-phone', on);
       document.documentElement.toggleAttribute('data-standalone', this.standalone());
       document.documentElement.toggleAttribute('data-fullscreen', fs);
+      document.querySelectorAll('.me-actions').forEach(a => a.classList.toggle('has-fs', this.wantsFullscreenButton())); // narrow menus lay the buttons out 2x2 or 2+1
       document.querySelectorAll('.fsBtn').forEach(b => { b.style.display = this.wantsFullscreenButton() ? '' : 'none'; b.textContent = b.classList.contains('icon-btn') ? (fs ? '🗗' : '⛶') : (fs ? '🗗 Exit full screen' : '⛶ Full screen'); b.title = fs ? 'Exit full screen' : 'Full screen'; });
       if (pitch) pitch.setFill(on);
       if (window.Touch) Touch.tune(on ? { R: 30, dead: 3, rest: true } : { R: 56, dead: 6, rest: false }); // short thumb travel + resting stick on phones
