@@ -470,3 +470,9 @@ html[data-phone] .toast { top: 44px; font-size: 12px; } html[data-phone] #choice
 html[data-phone] #explainCard { width: 240px; bottom: 50px; } html[data-phone] .explain canvas { max-height: 96px; }
 html[data-phone] #choiceBar { bottom: 6px; left: auto; right: 6px; transform: translateY(30px); } html[data-phone] #choiceBar.show { transform: none; }
 html[data-phone] #choiceBar .btn.big { font-size: 13px; padding: 8px 12px; } html[data-phone] #choiceBar .prompt { font-size: 11px; padding: 4px 10px; }
+/* Full screen / Home Screen app: keep the HUD clear of the notch and the home indicator (viewport-fit=cover lets the field run underneath) */
+html[data-phone] .hud.top { padding-left: calc(6px + env(safe-area-inset-left)); padding-right: calc(6px + env(safe-area-inset-right)); padding-top: calc(4px + env(safe-area-inset-top)); }
+html[data-phone] .hud.bottom { padding-left: calc(6px + env(safe-area-inset-left)); padding-right: calc(6px + env(safe-area-inset-right)); padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+html[data-phone] .tbtn.pass { right: calc(72px + env(safe-area-inset-right)); } html[data-phone] .tbtn.shoot { right: calc(8px + env(safe-area-inset-right)); }
+html[data-phone] #choiceBar { right: calc(6px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom)); }
+html[data-phone] .rule-panel { right: calc(4px + env(safe-area-inset-right)); }

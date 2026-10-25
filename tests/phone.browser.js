@@ -51,6 +51,21 @@ async function backToMenu(page) {
   page.on('pageerror', e => pageErrors.push(String(e))); page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
   await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 }); await page.waitForTimeout(500);
   check(await page.evaluate(() => document.documentElement.hasAttribute('data-phone')), 'phone: Pocket view switches on for a small landscape phone');
+  // full screen + Home Screen app plumbing
+  const man = await page.evaluate(async () => { const l = document.querySelector('link[rel="manifest"]'); if (!l) return null; const r = await fetch(l.href); const j = await r.json().catch(() => null); return { status: r.status, type: r.headers.get('content-type'), icons: j && j.icons && j.icons.length, display: j && j.display }; });
+  check(man && man.status === 200 && man.icons >= 2 && man.display === 'fullscreen', `phone: web app manifest served (${JSON.stringify(man)})`);
+  const icon = await page.evaluate(async () => { const l = document.querySelector('link[rel="apple-touch-icon"]'); if (!l) return 0; return (await fetch(l.href)).status; });
+  check(icon === 200, 'phone: apple-touch-icon is served (Add to Home Screen gets a real icon)');
+  check(await page.$eval('meta[name="apple-mobile-web-app-capable"]', m => m.content === 'yes'), 'phone: Home Screen app runs without Safari bars (apple-mobile-web-app-capable)');
+  const fsInfo = await page.evaluate(() => ({ supported: PhoneView.fullscreenSupported(), standalone: PhoneView.standalone(), btn: [...document.querySelectorAll('.fsBtn')].map(b => b.style.display !== 'none') }));
+  log('fullscreen:', JSON.stringify(fsInfo));
+  if (fsInfo.supported) {
+    check(fsInfo.btn.every(Boolean), 'phone: full-screen buttons are shown when the browser can go full screen');
+    await page.click('#menu .fsBtn'); await page.waitForTimeout(600);
+    const fsNow = await page.evaluate(() => ({ fs: PhoneView.isFullscreen(), attr: document.documentElement.hasAttribute('data-fullscreen'), label: document.querySelector('#menu .fsBtn').textContent }));
+    check(fsNow.fs && fsNow.attr && /Exit/.test(fsNow.label), `phone: tapping the button enters full screen and the button flips to Exit (${JSON.stringify(fsNow)})`);
+    await page.evaluate(() => PhoneView.exitFullscreen()); await page.waitForTimeout(400);
+  } else console.log('  - this browser build cannot go full screen; button checks skipped');
 
   await startMatch(page, 'match');
   let s = await page.evaluate(state); log('phone match:', JSON.stringify(s));

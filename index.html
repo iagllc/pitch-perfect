@@ -6,6 +6,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pitch Perfect">
+  <meta name="theme-color" content="#0b1020">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="img/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <title>Pitch Perfect — Soccer Spacing & Offside Game</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Baloo+2:wght@700;800&family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
@@ -28,6 +33,7 @@
       <div class="me-info"><b id="menuAvatarName">Your player</b><span id="menuAvatarSet">Kids set</span></div>
       <button class="btn cyan small" id="menuAvatarBtn">✏️ Edit avatar</button>
       <button class="btn gold small" id="menuRulesBtn">📘 Rule book</button>
+      <button class="btn ghost small fsBtn" title="Full screen" style="display:none">⛶ Full screen</button>
       <button class="btn ghost small camBtn">🎥 Camera: full field</button>
     </div>
 
@@ -114,6 +120,7 @@
         <div style="display:flex;gap:8px">
           <button class="btn ghost small camBtn" title="Switch camera (Z key)">🎥 Camera: full field</button>
           <button class="btn ghost icon-btn muteBtn" title="Sound">🔊</button>
+          <button class="btn ghost icon-btn fsBtn" title="Full screen" style="display:none">⛶</button>
           <button class="btn ghost icon-btn" id="pauseBtn" title="Pause (P)">⏸</button>
           <button class="btn ghost small" id="menuBtn">Menu</button>
         </div>

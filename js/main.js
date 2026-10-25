@@ -22,6 +22,12 @@
   const isPhone = () => Math.min(window.innerWidth, window.innerHeight) < 520 || Math.max(window.innerWidth, window.innerHeight) < 1000;
   if (isPhone() && !settings.cameraChosen) settings.camera = 'follow'; // small screens: follow the ball unless the player chose otherwise
   let rotateSkipped = false;
+  // On an iPhone in Safari, "Add to Home Screen" is the only way to lose the tabs and bars for good: say so once.
+  function homeScreenTip() {
+    if (!PhoneView.active() || PhoneView.standalone() || settings.homeTipShown || !/iPhone|iPad|iPod/.test(navigator.userAgent)) return;
+    settings.homeTipShown = true; save();
+    setTimeout(() => app.toast('Tip: Share ⬆️ → "Add to Home Screen" plays full screen with no tabs 📱', 6000), 3000);
+  }
   function updateRotate() { const inGame = document.getElementById('game').classList.contains('active') && window.__app && window.__app.running; const portrait = window.innerHeight > window.innerWidth && window.innerWidth < 700; document.getElementById('rotate').classList.toggle('show', inGame && portrait && !rotateSkipped); }
 
   const TUTORIALS = {
@@ -59,7 +65,7 @@
     verdict(word, why, kind) { el.verdict.className = 'show ' + kind; el.verdict.querySelector('.word').textContent = word; el.verdict.querySelector('.why').textContent = why; },
     hideVerdict() { el.verdict.className = ''; },
     showPass(b) { el.passBtn.classList.toggle('show', !!b && !Touch.enabled); },
-    toast(t) { el.toast.textContent = t; el.toast.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => el.toast.classList.remove('show'), 1600); },
+    toast(t, ms) { el.toast.textContent = t; el.toast.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => el.toast.classList.remove('show'), ms || 1600); },
     finish(r) { this.running = false; Touch.enable(false); this.lastReport = r.report || null; showResults(r); updateRotate(); },
     choices(list, cb, prompt) { const bar = $('#choiceBar'); bar.innerHTML = `${prompt ? `<div class="prompt">${prompt}</div>` : ''}<div class="btns">${list.map((c, i) => `<button class="btn big ${i % 2 ? 'pink' : 'cyan'}" data-i="${i}">${c.label}</button>`).join('')}</div>`; bar.classList.add('show'); bar.querySelectorAll('button').forEach(b => b.onclick = () => { this.sfx.pop(); cb(list[+b.dataset.i].key); }); },
     hideChoices() { const bar = $('#choiceBar'); bar.classList.remove('show'); bar.innerHTML = ''; },
@@ -164,7 +170,7 @@
     el.tutorial.querySelectorAll('#diffPick button').forEach(b => b.onclick = () => { settings.difficulty = b.dataset.d; save(); el.tutorial.querySelectorAll('#diffPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     el.tutorial.querySelectorAll('#teamPick button').forEach(b => b.onclick = () => { settings.team = +b.dataset.t; save(); el.tutorial.querySelectorAll('#teamPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     $('#tutBack').onclick = $('#tutX').onclick = () => { el.tutorial.classList.remove('active'); show(el.menu); };
-    $('#tutPlay').onclick = () => { el.tutorial.classList.remove('active'); startGame(key); };
+    $('#tutPlay').onclick = () => { if (PhoneView.active()) PhoneView.enterFullscreen(); el.tutorial.classList.remove('active'); startGame(key); homeScreenTip(); }; // the Play tap is the gesture that lets a phone go full screen
   }
   function drawOffsideDiagrams() {
     const reds = (lineX) => [{ x: 103, y: 34, team: 1, gk: true }, { x: lineX, y: 20, team: 1, label: '2nd-last' }, { x: lineX + 1, y: 44, team: 1 }, { x: lineX - 8, y: 12, team: 1 }];
@@ -272,7 +278,7 @@
     document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => b.dataset.mode === 'online' ? openOnline() : openTutorial(b.dataset.mode));
     el.muteBtns.forEach(b => b.onclick = toggleMute); renderMute();
     document.querySelectorAll('.camBtn').forEach(b => b.onclick = () => app.toggleCamera()); renderCamera();
-    $('#menuAvatarBtn').onclick = () => openAvatar('menu'); $('#menuRulesBtn').onclick = openRules; $('#rulesBack').onclick = () => show(el.menu); $('#lobbyAvatarBtn').onclick = () => openAvatar('lobby'); $('#avBack').onclick = () => show(avReturn === 'lobby' ? el.lobby : el.menu); renderMenuAvatar();
+    $('#menuAvatarBtn').onclick = () => openAvatar('menu'); $('#menuRulesBtn').onclick = openRules; document.querySelectorAll('.fsBtn').forEach(b => b.onclick = () => PhoneView.toggleFullscreen()); $('#rulesBack').onclick = () => show(el.menu); $('#lobbyAvatarBtn').onclick = () => openAvatar('lobby'); $('#avBack').onclick = () => show(avReturn === 'lobby' ? el.lobby : el.menu); renderMenuAvatar();
     $('#lobbyCreate').onclick = () => joinRoom(null); lob.join.onclick = () => joinRoom(lob.codeIn.value.trim().toUpperCase());
     lob.start.onclick = () => app.net && app.net.send({ t: 'start' });
     $('#lobbyBack').onclick = leaveToMenu; $('#lobbyCopy').onclick = () => { try { navigator.clipboard.writeText(lob.link.href); app.toast('Link copied!'); } catch (e) {} };
