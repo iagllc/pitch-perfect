@@ -15,15 +15,20 @@
     fullView() { this.setView({ x: -MARGIN, y: -MARGIN, w: F.w + MARGIN * 2, h: F.h + MARGIN * 2 }); }
     resize() {
       const r = this.container.getBoundingClientRect();
-      const availW = Math.max(200, r.width - 24), availH = Math.max(150, r.height - 24);
-      this.baseScale = Math.min(availW / this.view.w, availH / this.view.h); this.scale = this.baseScale * (this.cam ? this.cam.zoom : 1);
-      this.cssW = Math.floor(this.view.w * this.baseScale); this.cssH = Math.floor(this.view.h * this.baseScale);
+      const pad = this.fill ? 0 : 24; // fill mode (Pocket view on small phones): the canvas takes the whole stage instead of keeping the field's shape
+      const availW = Math.max(200, r.width - pad), availH = Math.max(150, r.height - pad);
+      this.baseScale = Math.min(availW / this.view.w, availH / this.view.h);
+      if (this.fill) { this.cssW = Math.floor(availW); this.cssH = Math.floor(availH); if (!this.cam || this.cam.auto) this.cam = this.centerCam(); }
+      else { this.cssW = Math.floor(this.view.w * this.baseScale); this.cssH = Math.floor(this.view.h * this.baseScale); }
+      this.scale = this.baseScale * (this.cam ? this.cam.zoom : 1);
       this.dpr = Math.min(2, window.devicePixelRatio || 1);
       this.canvas.style.width = this.cssW + 'px'; this.canvas.style.height = this.cssH + 'px';
       this.canvas.width = Math.floor(this.cssW * this.dpr); this.canvas.height = Math.floor(this.cssH * this.dpr);
       this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     }
-    setCamera(cam) { this.cam = cam; this.scale = this.baseScale * (cam ? cam.zoom : 1); }
+    setFill(on) { on = !!on; if (this.fill === on) return; this.fill = on; if (!on && this.cam && this.cam.auto) this.cam = null; this.resize(); }
+    centerCam() { return { cx: this.view.x + this.view.w / 2, cy: this.view.y + this.view.h / 2, zoom: 1, auto: true }; } // fill mode with no camera: the whole view, centered
+    setCamera(cam) { if (!cam) this.camPos = null; this.cam = cam || (this.fill ? this.centerCam() : null); this.scale = this.baseScale * (this.cam ? this.cam.zoom : 1); }
     toPx(x, y) { if (this.cam) return [(x - this.cam.cx) * this.scale + this.cssW / 2, (y - this.cam.cy) * this.scale + this.cssH / 2]; return [(x - this.view.x) * this.scale, (y - this.view.y) * this.scale]; }
     toM(px, py) { if (this.cam) return { x: (px - this.cssW / 2) / this.scale + this.cam.cx, y: (py - this.cssH / 2) / this.scale + this.cam.cy }; return { x: px / this.scale + this.view.x, y: py / this.scale + this.view.y }; }
     camHalf() { return { w: this.cssW / (2 * this.scale), h: this.cssH / (2 * this.scale) }; }
@@ -87,9 +92,9 @@
         for (const cy2 of [0, F.h]) { const [ax, ay] = P(gx, cy2); c.beginPath(); c.arc(ax, ay, 1 * s, 0, Math.PI * 2); c.stroke(); }
       }
     }
-    buildZoomCache() { // the whole field rendered once at the zoomed scale (device-pixel-ratio 1), then cropped per frame
-      const zoom = this.cam.zoom, key = `${this.cssW}x${this.cssH}|${zoom}|${document.documentElement.dataset.theme}`; if (this.zoomKey === key) return;
-      this.zoomKey = key; const W = Math.round(this.cssW * zoom), H = Math.round(this.cssH * zoom);
+    buildZoomCache(zoom) { // the whole view rendered once at the zoomed scale (device-pixel-ratio 1), then cropped (and scaled, if the camera zoom differs) per frame
+      const v = this.view, key = `${this.baseScale.toFixed(3)}|${zoom.toFixed(3)}|${v.x},${v.y},${v.w},${v.h}|${document.documentElement.dataset.theme}`; if (this.zoomKey === key) return;
+      this.zoomKey = key; const W = Math.ceil(v.w * this.baseScale * zoom), H = Math.ceil(v.h * this.baseScale * zoom);
       const off = document.createElement('canvas'); off.width = W; off.height = H; const c = off.getContext('2d');
       const saved = { cam: this.cam, scale: this.scale, cssW: this.cssW, cssH: this.cssH, dpr: this.dpr };
       this.cam = null; this.scale = this.baseScale * zoom; this.cssW = W; this.cssH = H; this.dpr = 1;
@@ -97,9 +102,14 @@
     }
     drawField() {
       if (this.cam) {
-        this.buildZoomCache(); const zs = this.baseScale * this.cam.zoom, h = this.camHalf();
-        const sx = (this.cam.cx - h.w - this.view.x) * zs, sy = (this.cam.cy - h.h - this.view.y) * zs;
-        this.ctx.fillStyle = '#163b22'; this.ctx.fillRect(0, 0, this.cssW, this.cssH); this.ctx.drawImage(this.zoomCache, sx, sy, this.cssW, this.cssH, 0, 0, this.cssW, this.cssH); return;
+        // The cache is built at cacheZoom (the camera's maximum zoom, so a zooming camera never rebuilds it) and scaled by k on the way to the screen.
+        const cz = this.cam.cacheZoom || this.cam.zoom; this.buildZoomCache(cz);
+        const Z = this.zoomCache, zsC = this.baseScale * cz, k = this.cam.zoom / cz, h = this.camHalf(), c = this.ctx;
+        let sx = (this.cam.cx - h.w - this.view.x) * zsC, sy = (this.cam.cy - h.h - this.view.y) * zsC, sw = this.cssW / k, sh = this.cssH / k, dx = 0, dy = 0;
+        c.fillStyle = '#163b22'; c.fillRect(0, 0, this.cssW, this.cssH);
+        if (sx < 0) { dx = -sx * k; sw += sx; sx = 0; } if (sy < 0) { dy = -sy * k; sh += sy; sy = 0; } // beyond the view: dark grass
+        sw = Math.min(sw, Z.width - sx); sh = Math.min(sh, Z.height - sy);
+        if (sw > 0 && sh > 0) c.drawImage(Z, sx, sy, sw, sh, dx, dy, sw * k, sh * k); return;
       }
       this.buildCache(); this.ctx.save(); this.ctx.setTransform(1, 0, 0, 1, 0, 0); this.ctx.drawImage(this.cache, 0, 0); this.ctx.restore();
     }
@@ -165,6 +175,35 @@
       for (let i = 0; i <= 6; i++) { const yy = y0 + i * h / 6; c.beginPath(); for (let xx = 0; xx <= w; xx += 3) { const off = Math.sin(t * 28 + xx * 0.12 + i) * 4 * k * (side ? (xx / w) : (1 - xx / w)); c.lineTo(x0 + xx + off, yy + Math.cos(t * 22 + i) * 2 * k); } c.stroke(); }
       for (let i = 0; i <= 3; i++) { const xx = x0 + i * w / 3; c.beginPath(); for (let yy = 0; yy <= h; yy += 3) { c.lineTo(xx + Math.sin(t * 28 + yy * 0.1) * 4 * k, y0 + yy); } c.stroke(); }
       const g = c.createRadialGradient(x0 + w / 2, y0 + h / 2, 2, x0 + w / 2, y0 + h / 2, h); g.addColorStop(0, `rgba(255,255,255,${0.5 * k})`); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(x0 - h, y0 - h / 2, w + 2 * h, h * 2); c.restore();
+    }
+    // ---- Pocket view (small phones) ----
+    // Frame the zone the player needs to be active in: every point in `pts` stays on screen when it can, the camera zooms between
+    // minScale and maxScale pixels per meter so players stay readable, and `focus` (the player you control) never leaves the screen.
+    actionCam(dt, pts, opts = {}) {
+      const minS = opts.minScale || 7.5, maxS = opts.maxScale || 13, pad = opts.pad || 7, v = this.view, cl = (a, lo, hi) => Math.max(lo, Math.min(hi, a));
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const p of pts) { if (!p || typeof p.x !== 'number') continue; x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
+      if (x0 === Infinity) return;
+      const fit = Math.min(this.cssW / (x1 - x0 + pad * 2), this.cssH / (y1 - y0 + pad * 2));
+      const scale = Math.max(minS, Math.min(maxS, fit)), hw = this.cssW / (2 * scale), hh = this.cssH / (2 * scale);
+      let cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      const f = opts.focus; if (f) { cx = cl(cx, f.x - hw + 5, f.x + hw - 5); cy = cl(cy, f.y - hh + 4, f.y + hh - 4); }
+      cx = v.w <= hw * 2 ? v.x + v.w / 2 : cl(cx, v.x + hw, v.x + v.w - hw); cy = v.h <= hh * 2 ? v.y + v.h / 2 : cl(cy, v.y + hh, v.y + v.h - hh);
+      const zoom = scale / this.baseScale;
+      if (!this.camPos) this.camPos = { x: cx, y: cy, zoom };
+      const cp = this.camPos, kp = Math.min(1, dt * 4), kz = Math.min(1, dt * 2.5);
+      cp.x += (cx - cp.x) * kp; cp.y += (cy - cp.y) * kp; cp.zoom += (zoom - cp.zoom) * kz;
+      this.setCamera({ cx: cp.x, cy: cp.y, zoom: cp.zoom, cacheZoom: maxS / this.baseScale });
+    }
+    drawRadar(players, ball) { // tiny full-field map: every player, the ball and the camera window
+      const c = this.ctx, w = Math.round(Math.min(120, Math.max(84, this.cssW * 0.15))), h = Math.round(w * F.h / F.w), x0 = Math.round((this.cssW - w) / 2), y0 = 6, k = w / F.w;
+      c.save(); c.fillStyle = 'rgba(6,16,31,.62)'; c.fillRect(x0 - 4, y0 - 4, w + 8, h + 8);
+      c.beginPath(); c.rect(x0, y0, w, h); c.clip();
+      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1; c.strokeRect(x0 + .5, y0 + .5, w - 1, h - 1); c.beginPath(); c.moveTo(x0 + w / 2, y0); c.lineTo(x0 + w / 2, y0 + h); c.stroke();
+      if (this.cam) { const hh = this.camHalf(); c.strokeStyle = 'rgba(255,255,255,.9)'; c.strokeRect(x0 + (this.cam.cx - hh.w) * k, y0 + (this.cam.cy - hh.h) * k, hh.w * 2 * k, hh.h * 2 * k); }
+      for (const p of players) { c.fillStyle = p.me ? '#b6ff3b' : p.team === 0 ? '#5aa0ff' : '#ff6b6b'; c.beginPath(); c.arc(x0 + p.x * k, y0 + p.y * k, p.me ? 3 : 2, 0, Math.PI * 2); c.fill(); }
+      if (ball) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x0 + ball.x * k, y0 + ball.y * k, 2, 0, Math.PI * 2); c.fill(); }
+      c.restore();
     }
     hull(points) { // convex hull (monotone chain) for the team-shape blob
       const pts = points.slice().sort((a, b) => a.x - b.x || a.y - b.y); if (pts.length < 3) return pts;

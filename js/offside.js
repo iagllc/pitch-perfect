@@ -132,6 +132,10 @@
     update(dt) {
       if (this.over) return;
       const P = this.app.pitch; P.t += dt;
+      if (window.PhoneView && PhoneView.active() && this.ball) { // Pocket view: the runner, the ball, the passer and the defensive line
+        const a = this.variant === 'attack' ? this.me : this.striker;
+        P.actionCam(dt, [a, this.ball, this.passer].concat(this.defs || []), { focus: a, minScale: 7, maxScale: 12 });
+      }
       if (Explain.paused) return;
       if (this.phase === 'play') { this.updatePlay(dt); const R = this.rulesNow(); this.app.setRules(R); this.liveOffside = R.offside; }
       else if (this.phase === 'freeze') { this.freezeT += dt; if (this.freezeT > 1.9) this.startResolve(); }

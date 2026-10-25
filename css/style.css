@@ -456,3 +456,17 @@ html[data-theme="kid"] .av-grid canvas { border: 3px solid rgba(255,255,255,.3);
 .rb-rule.known .rb-mark { background: var(--lime); color: #06101f; } .rb-rule.missed .rb-mark { background: var(--red); color: #fff; }
 .rb-rule p { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.4; } .rb-lesson { color: var(--text) !important; font-weight: 700; }
 .rule-check { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+
+/* ================= Pocket view: small phones held sideways (set by js/phone.js) ================= */
+html[data-phone] #stage { padding: 0; } html[data-phone] canvas#pitch { border-radius: 0; box-shadow: none; }
+html[data-phone] .hud.top { padding: 4px 6px; gap: 4px; } html[data-phone] .hud.bottom { padding: 4px 6px; }
+html[data-phone] .chip { padding: 3px 7px; gap: 4px; } html[data-phone] .chip .val { font-size: 13px; } html[data-phone] .chip .lbl { display: none; }
+html[data-phone] .scoreboard { padding: 2px 8px; gap: 4px; } html[data-phone] .scoreboard .num { font-size: 15px; } html[data-phone] .scoreboard .clock { font-size: 12px; } html[data-phone] .scoreboard .tm { font-size: 9px; }
+html[data-phone] .muteBtn { display: none; } html[data-phone] .camBtn { width: 32px; height: 32px; } html[data-phone] .camBtn::before { font-size: 14px; } html[data-phone] .btn.icon-btn { width: 32px; height: 32px; font-size: 13px; } html[data-phone] #menuBtn { font-size: 11px; padding: 5px 8px; }
+html[data-phone] .coach { max-width: 46vw; gap: 4px; } html[data-phone] .coach .face { font-size: 18px; } html[data-phone] .bubble { font-size: 11px; line-height: 1.2; padding: 5px 8px; }
+html[data-phone] .tbtn { width: 56px; height: 56px; font-size: 12px; bottom: 56px; border-width: 2px; } html[data-phone] .tbtn.pass { right: 72px; } html[data-phone] .tbtn.shoot { right: 8px; bottom: 92px; }
+html[data-phone] .rule-panel { width: 148px; font-size: 10px; top: 42px; right: 4px; padding: 6px 7px; } html[data-phone] .rp-title { font-size: 11px; }
+html[data-phone] .toast { top: 44px; font-size: 12px; } html[data-phone] #choiceBar { bottom: 64px; }
+html[data-phone] #explainCard { width: 240px; bottom: 50px; } html[data-phone] .explain canvas { max-height: 96px; }
+html[data-phone] #choiceBar { bottom: 6px; left: auto; right: 6px; transform: translateY(30px); } html[data-phone] #choiceBar.show { transform: none; }
+html[data-phone] #choiceBar .btn.big { font-size: 13px; padding: 8px 12px; } html[data-phone] #choiceBar .prompt { font-size: 11px; padding: 4px 10px; }

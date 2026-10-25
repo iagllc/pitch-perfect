@@ -117,4 +117,6 @@ npm i -D playwright && npx playwright install chromium   # once
 npm run test:browser                                      # headless Chromium: a "tackle bot" plays a real match and proves the
                                                           # FOUL / PENALTY! / ADVANTAGE popups fire, with zero console errors
 URL=https://your-site.onrender.com npm run test:browser   # same test against a deployed site
+npm run test:phone                                        # Pocket view: an emulated iPhone 15 held sideways gets a full-screen
+                                                          # field, an action camera and a radar; the desktop layout is unchanged
 ```

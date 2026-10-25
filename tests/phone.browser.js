@@ -1,0 +1,95 @@
+// Pocket view test: on an emulated iPhone 15 held sideways the field fills the screen, the camera zooms to the action and
+// the radar is drawn; on a desktop nothing changes. Needs Playwright (see smoke.browser.js).
+//
+// Run:  npm run test:phone                       # local server on a free port
+//       URL=https://your-site npm run test:phone   # a deployed site
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
+let chromium, devices;
+try { ({ chromium, devices } = require('playwright')); } catch (e) { console.log('Playwright is not installed. Run: npm i -D playwright && npx playwright install chromium'); process.exit(2); }
+
+const OUT = path.join(__dirname, 'screenshots');
+const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const problems = [];
+const check = (ok, what) => { console.log((ok ? '  ✓ ' : '  ✗ ') + what); if (!ok) problems.push(what); };
+
+async function startLocalServer() {
+  const port = 8100 + Math.floor(Math.random() * 800);
+  const proc = spawn(process.execPath, [path.join(__dirname, '..', 'server', 'server.js')], { env: { ...process.env, PORT: String(port) }, stdio: ['ignore', 'pipe', 'inherit'] });
+  await new Promise((res, rej) => { proc.stdout.on('data', d => { if (String(d).includes('running')) res(); }); proc.on('exit', c => rej(new Error('server exited ' + c))); setTimeout(() => rej(new Error('server start timeout')), 10000); });
+  return { url: `http://localhost:${port}/`, proc };
+}
+const state = () => ({ // read from inside the page
+  phone: document.documentElement.hasAttribute('data-phone'), win: [innerWidth, innerHeight],
+  canvas: (() => { const r = document.querySelector('canvas#pitch').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(),
+  stage: (() => { const r = document.getElementById('stage').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(),
+  scale: +window.__app.pitch.scale.toFixed(2), base: +window.__app.pitch.baseScale.toFixed(2), cam: window.__app.pitch.cam ? { zoom: +window.__app.pitch.cam.zoom.toFixed(2), cacheZoom: window.__app.pitch.cam.cacheZoom && +window.__app.pitch.cam.cacheZoom.toFixed(2), auto: !!window.__app.pitch.cam.auto } : null,
+});
+async function startMatch(page, mode) {
+  await page.click(`[data-mode="${mode}"]`); await page.waitForTimeout(500);
+  if (await page.$eval('#avatar', e => e.classList.contains('active'))) { await page.click('#avSave'); await page.waitForTimeout(700); }
+  await page.click('#tutPlay'); await page.waitForTimeout(3000);
+}
+async function backToMenu(page) {
+  const m = await page.$('#explainModal:visible'); if (m) { const b = await m.$('button'); if (b) await b.click().catch(() => {}); }
+  await page.keyboard.press('KeyP'); await page.waitForTimeout(300); const q = await page.$('#quitBtn'); if (q) await q.click({ force: true }).catch(() => {}); await page.waitForTimeout(500);
+}
+
+(async () => {
+  let server = null, url = process.env.URL;
+  if (!url) { server = await startLocalServer(); url = server.url; }
+  fs.mkdirSync(OUT, { recursive: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM || undefined });
+  const pageErrors = [], consoleErrors = [];
+
+  // ---- iPhone 15, landscape
+  const dev = devices['iPhone 15 landscape'] || devices['iPhone 13 landscape'];
+  log('iPhone emulation:', JSON.stringify(dev.viewport), 'dpr', dev.deviceScaleFactor);
+  const ctx = await browser.newContext({ ...dev });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => pageErrors.push(String(e))); page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 }); await page.waitForTimeout(500);
+  check(await page.evaluate(() => document.documentElement.hasAttribute('data-phone')), 'phone: Pocket view switches on for a small landscape phone');
+
+  await startMatch(page, 'match');
+  let s = await page.evaluate(state); log('phone match:', JSON.stringify(s));
+  check(s.canvas[0] >= s.stage[0] - 2 && s.canvas[1] >= s.stage[1] - 2, `phone match: canvas fills the stage (${s.canvas.join('x')} of ${s.stage.join('x')})`);
+  check(s.scale >= 7.5 && s.scale <= 13.5, `phone match: zoomed to ${s.scale} px per meter (want 7.5–13)`);
+  check(s.cam && s.cam.cacheZoom > 0 && !s.cam.auto, 'phone match: action camera is driving the view');
+  check(s.scale > s.base * 1.5, `phone match: players are ${(s.scale / s.base).toFixed(1)}x bigger than the full-field view`);
+  await page.screenshot({ path: path.join(OUT, 'pocket-match.png') });
+  await page.waitForTimeout(3000); const s2 = await page.evaluate(state); check(s2.cam && s2.scale >= 7.5, `phone match: still framing the action 3s later (${s2.scale} px/m)`);
+  await page.screenshot({ path: path.join(OUT, 'pocket-match-2.png') });
+  // the camera button still gives the whole field, now filling the width
+  const m0 = await page.$('#explainModal:visible'); if (m0) { const b = await m0.$('button'); if (b) await b.click().catch(() => {}); await page.waitForTimeout(300); } // a coaching popup pauses the game
+  await page.evaluate(() => window.__app.toggleCamera()); await page.waitForTimeout(800); const sf = await page.evaluate(state); log('phone full-field:', JSON.stringify(sf));
+  check(sf.cam && sf.cam.auto && Math.abs(sf.cam.zoom - 1) < 0.01 && sf.canvas[0] >= sf.stage[0] - 2, 'phone match: camera button shows the whole field, canvas still full width');
+  await page.screenshot({ path: path.join(OUT, 'pocket-match-full.png') });
+  await page.evaluate(() => window.__app.toggleCamera()); await backToMenu(page);
+
+  await startMatch(page, 'attack');
+  s = await page.evaluate(state); log('phone striker drill:', JSON.stringify(s));
+  check(s.cam && !s.cam.auto && s.scale >= 7, `phone drill: Striker Timing framed at ${s.scale} px per meter`);
+  await page.screenshot({ path: path.join(OUT, 'pocket-drill-striker.png') }); await backToMenu(page);
+  await startMatch(page, 'throwin');
+  s = await page.evaluate(state); log('phone throw-in drill:', JSON.stringify(s));
+  check(s.cam && s.scale >= 6.5, `phone drill: Throw-in Thinking framed at ${s.scale} px per meter`);
+  await page.screenshot({ path: path.join(OUT, 'pocket-drill-throwin.png') }); await backToMenu(page);
+  await ctx.close();
+
+  // ---- desktop: nothing changes
+  const dctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }); const dpage = await dctx.newPage();
+  dpage.on('pageerror', e => pageErrors.push(String(e))); dpage.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+  await dpage.goto(url, { waitUntil: 'networkidle', timeout: 60000 }); await dpage.waitForTimeout(500);
+  await startMatch(dpage, 'match');
+  s = await dpage.evaluate(state); log('desktop match:', JSON.stringify(s));
+  check(!s.phone, 'desktop: Pocket view stays off');
+  check(s.cam === null && s.canvas[0] < s.stage[0] - 20, `desktop: full-field camera, field keeps its shape (${s.canvas.join('x')} in ${s.stage.join('x')})`);
+  await dctx.close(); await browser.close(); if (server) server.proc.kill();
+
+  check(pageErrors.length === 0, 'no page errors' + (pageErrors.length ? ': ' + pageErrors.join(' | ') : ''));
+  check(consoleErrors.length === 0, 'no console errors' + (consoleErrors.length ? ': ' + consoleErrors.join(' | ') : ''));
+  console.log(problems.length ? `\n✗ FAIL: ${problems.length} problem(s)` : '\n✓ PASS: Pocket view works on a small phone and leaves the desktop alone');
+  process.exit(problems.length ? 1 : 0);
+})().catch(e => { console.error('FATAL', e); process.exit(1); });

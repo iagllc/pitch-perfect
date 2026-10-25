@@ -276,7 +276,8 @@
     $('#lobbyCreate').onclick = () => joinRoom(null); lob.join.onclick = () => joinRoom(lob.codeIn.value.trim().toUpperCase());
     lob.start.onclick = () => app.net && app.net.send({ t: 'start' });
     $('#lobbyBack').onclick = leaveToMenu; $('#lobbyCopy').onclick = () => { try { navigator.clipboard.writeText(lob.link.href); app.toast('Link copied!'); } catch (e) {} };
-    window.addEventListener('resize', () => { app.pitch && app.pitch.resize(); updateRotate(); }); window.addEventListener('orientationchange', () => setTimeout(() => { app.pitch && app.pitch.resize(); updateRotate(); }, 300));
+    const relayout = () => { PhoneView.apply(app.pitch); app.pitch && app.pitch.resize(); updateRotate(); };
+    window.addEventListener('resize', relayout); window.addEventListener('orientationchange', () => setTimeout(relayout, 300));
     $('#rotateSkip').onclick = () => { rotateSkipped = true; updateRotate(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden && app.running && !app.paused) togglePause(); });
   }
@@ -285,7 +286,7 @@
 
   // ---------- boot ----------
   window.addEventListener('DOMContentLoaded', () => {
-    app.pitch = new Pitch(el.canvas, el.stage); Touch.init(el.stage);
+    app.pitch = new Pitch(el.canvas, el.stage); Touch.init(el.stage); PhoneView.apply(app.pitch);
     bindInput(); show(el.menu); requestAnimationFrame(frame);
     const room = new URLSearchParams(location.search).get('room'); if (room && Net.available()) openOnline(room.toUpperCase());
     window.__app = app;

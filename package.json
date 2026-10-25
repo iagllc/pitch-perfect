@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node server/server.js",
     "test": "node tests/logic.test.js && node tests/sim.test.js",
-    "test:browser": "node tests/smoke.browser.js"
+    "test:browser": "node tests/smoke.browser.js",
+    "test:phone": "node tests/phone.browser.js"
   },
   "dependencies": {
     "ws": "^8.18.3"

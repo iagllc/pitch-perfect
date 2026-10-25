@@ -84,9 +84,15 @@
       }
     }
     updateCamera(dt) {
-      const P = this.app.pitch, v = this.view, follow = this.app.settings.camera === 'follow';
-      if (!follow) { if (P.cam) P.setCamera(null); return; }
-      const me = v.players[this.myIdx], small = Math.min(window.innerWidth, window.innerHeight) < 520, zoom = small ? 2.4 : Touch.enabled ? 1.7 : 1.9;
+      const P = this.app.pitch, v = this.view, follow = this.app.settings.camera === 'follow', pocket = window.PhoneView && PhoneView.active();
+      if (!follow) { if (P.cam && !P.cam.auto) P.setCamera(null); return; }
+      const me = v.players[this.myIdx];
+      if (pocket) { // Pocket view: frame me, the ball, where the play is heading (their goal when we have it, ours when they do) and my spot
+        const d = this.dir(), wePoss = v.poss === this.team, pts = [me, v.ball, { x: L.clamp(v.ball.x + (wePoss ? d * 14 : -d * 10), 0, F.w), y: v.ball.y }];
+        if (me.target && v.holder !== this.myIdx) pts.push(me.target);
+        P.actionCam(dt, pts, { focus: me }); return;
+      }
+      const small = Math.min(window.innerWidth, window.innerHeight) < 520, zoom = small ? 2.4 : Touch.enabled ? 1.7 : 1.9;
       const tx = v.ball.x * 0.6 + me.x * 0.4, ty = v.ball.y * 0.6 + me.y * 0.4;
       if (!this.camPos) this.camPos = { x: tx, y: ty };
       const k = Math.min(1, dt * 3.5); this.camPos.x += (tx - this.camPos.x) * k; this.camPos.y += (ty - this.camPos.y) * k;
@@ -154,6 +160,7 @@
       if (this.goalT < 1.3) P.netRipple(this.goalSide, this.goalT);
       if (this.guide) this.guide.draw(P);
       this.app.fx.draw(P);
+      if (window.PhoneView && PhoneView.active() && P.cam && !P.cam.auto) P.drawRadar(v.players.map((p, i) => ({ x: p.x, y: p.y, team: p.team, me: i === this.myIdx })), v.ball);
       if (v.phase !== 'play' && v.msg && !this.guide) { const m = MSG[v.msg] || v.msg.toUpperCase(); P.textM(F.halfway, F.h / 2 - 4, m, v.msg.includes('SCORES') ? '#ffd23f' : '#fff', m.length > 12 ? 5 : 7); }
       if (this.mode === 'net' && this.snaps.length && performance.now() - this.snaps[this.snaps.length - 1].at > 2000) P.textM(F.halfway, 6, 'Connection lost…', '#ff8a8a', 2.5);
     }

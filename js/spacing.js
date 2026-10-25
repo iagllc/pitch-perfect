@@ -126,6 +126,10 @@
     // ---------- update ----------
     update(dt) {
       if (this.over) return;
+      if (window.PhoneView && PhoneView.active() && this.me) { // Pocket view: me, the ball and the teammates I must keep my distance from
+        const near = this.us.filter(p => p !== this.me && L.dist(p, this.me) < 22);
+        this.app.pitch.actionCam(dt, [this.me, this.ball].concat(near), { focus: this.me, minScale: 6.5, maxScale: 12 });
+      }
       this.app.pitch.t += dt;
       if (Explain.paused) return;
       if (this.countdown > 0) { const before = Math.ceil(this.countdown); this.countdown -= dt; const after = Math.ceil(this.countdown); if (after < before) { after > 0 ? this.app.sfx.countdown() : this.app.sfx.start(); } return; }

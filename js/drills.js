@@ -27,7 +27,14 @@
       this.over = true; Touch.enable(false); this.app.hideChoices(); const max = this.rounds * 100, pct = Math.round(100 * this.points / max);
       this.app.finish({ title: this.title, score: this.points, pct, stars: L.stars(pct), feedback: this.feedback(pct), stats: this.stats(), lessons: Explain.lessons.slice(0, 4), report: { mode: this.title, name: 'You', role: '', result: `${this.points} points`, stars: L.stars(pct), stats: this.stats(), lessons: Explain.lessons } });
     }
-    update(dt) { if (this.over || Explain.paused) return; this.app.pitch.t += dt; if (this.rule) { this.ruleTick(dt); } else this.tick(dt); this.app.setScore(this.points); }
+    update(dt) {
+      if (this.over || Explain.paused) return; this.app.pitch.t += dt;
+      if (window.PhoneView && PhoneView.active() && this.me && this.ball) { // Pocket view: me, the ball and whatever the drill asks me to read (teammates, the carrier, the landing spot)
+        const pts = [this.me, this.ball, this.carrier, this.support, this.spot].concat(this.mates || [], this.defs || []);
+        this.app.pitch.actionCam(dt, pts, { focus: this.me, minScale: 6.5, maxScale: 12 });
+      }
+      if (this.rule) { this.ruleTick(dt); } else this.tick(dt); this.app.setScore(this.points);
+    }
     choose(k) { if (this.rule) this.answerRule(k); } // drills without choices (corner) still answer rule rounds
     ruleRound(tags) { // one question from the shared rule library, matched to this drill
       this.rule = Rules.pick(tags, 1)[0]; this.phase = 'choose'; this.onPick = null; this.hotkeys = { Digit1: 0, Digit2: 1, Digit3: 2 }; this.rulesRight = this.rulesRight || 0;
