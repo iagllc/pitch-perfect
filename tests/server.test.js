@@ -25,6 +25,7 @@ const get = (port, p, headers = {}) => new Promise((res, rej) => { http.get({ ho
     const r = await get(port, '/js/rules.js'); ok(r.headers.etag && r.headers['cache-control'] === 'no-cache', 'headers ' + JSON.stringify(r.headers));
     const r2 = await get(port, '/js/rules.js', { 'If-None-Match': r.headers.etag }); ok(r2.status === 304 && r2.body === '', 'status ' + r2.status);
     const r3 = await get(port, '/js/rules.js', { 'If-None-Match': '"nope"' }); ok(r3.status === 200 && r3.body.length > 1000, 'status ' + r3.status);
+    const r4 = await get(port, '/js/rules.js', { 'If-None-Match': 'W/' + r.headers.etag }); ok(r4.status === 304, 'weak tag (as a CDN sends it) should still get 304, got ' + r4.status);
   });
   await test('the web app manifest is served as a manifest', async () => { const r = await get(port, '/manifest.webmanifest'); ok(r.status === 200 && r.headers['content-type'] === 'application/manifest+json' && JSON.parse(r.body).icons.length === 2); });
   await test('server files are not served', async () => { const r = await get(port, '/server/server.js'); ok(r.status === 403, 'status ' + r.status); });

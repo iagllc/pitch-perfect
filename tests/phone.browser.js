@@ -26,10 +26,10 @@ const state = () => ({ // read from inside the page
   stage: (() => { const r = document.getElementById('stage').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(),
   scale: +window.__app.pitch.scale.toFixed(2), base: +window.__app.pitch.baseScale.toFixed(2), cam: window.__app.pitch.cam ? { zoom: +window.__app.pitch.cam.zoom.toFixed(2), cacheZoom: window.__app.pitch.cam.cacheZoom && +window.__app.pitch.cam.cacheZoom.toFixed(2), auto: !!window.__app.pitch.cam.auto } : null,
 });
-async function startMatch(page, mode) {
+async function startMatch(page, mode, settle = 3000) {
   await page.click(`[data-mode="${mode}"]`); await page.waitForTimeout(500);
   if (await page.$eval('#avatar', e => e.classList.contains('active'))) { await page.click('#avSave'); await page.waitForTimeout(700); }
-  await page.click('#tutPlay'); await page.waitForTimeout(3000);
+  await page.click('#tutPlay'); await page.waitForTimeout(settle);
 }
 async function backToMenu(page) {
   const m = await page.$('#explainModal:visible'); if (m) { const b = await m.$('button'); if (b) await b.click().catch(() => {}); }
@@ -122,10 +122,10 @@ async function backToMenu(page) {
   let li = await lineInfo(); log('striker drill line:', JSON.stringify(li));
   check(li.spread >= 0.8, `Striker Timing: defenders are ${li.spread} m apart front-to-back, not a straight line`);
   await backToMenu(dpage);
-  await startMatch(dpage, 'defend'); await dpage.waitForTimeout(1500);
+  await startMatch(dpage, 'defend', 700); // measure inside the first 3.5s of the round, before the pass is played
   li = await lineInfo(); log('defender drill line:', JSON.stringify(li));
   check(li.meIsDef && li.meIdx >= 0, `Defender Trap: you are defender #${li.meIdx + 2}, one player in the line`);
-  await dpage.keyboard.down('ArrowLeft'); await dpage.waitForTimeout(900); await dpage.keyboard.up('ArrowLeft'); await dpage.waitForTimeout(300);
+  await dpage.keyboard.down('ArrowLeft'); await dpage.waitForTimeout(900); await dpage.keyboard.up('ArrowLeft'); await dpage.waitForTimeout(200);
   const li2 = await lineInfo(); log('defender drill after stepping up:', JSON.stringify(li2));
   check(li2.xs[li2.meIdx] < li.xs[li.meIdx] - 3, 'Defender Trap: stepping up moves YOUR defender');
   check(li2.spread >= 0.8, `Defender Trap: your line followed but stayed ragged (${li2.spread} m front-to-back)`);

@@ -19,7 +19,8 @@ const server = http.createServer((req, res) => {
     // index.html gets versioned asset URLs (js/x.js?v=2.2.0) so a phone that cached the old scripts fetches the new ones after an update.
     if (p === '/index.html') data = Buffer.from(data.toString().replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSION}"`).replace('</head>', `  <meta name="app-version" content="${VERSION}">\n</head>`));
     const etag = '"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
-    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); return res.end(); }
+    const inm = (req.headers['if-none-match'] || '').split(',').map(s => s.trim().replace(/^W\//, '')); // a CDN in front may weaken the tag to W/"…"
+    if (inm.includes(etag)) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); return res.end(); }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', ETag: etag }); res.end(data);
   });
 });
