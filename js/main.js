@@ -293,6 +293,7 @@
   // ---------- boot ----------
   window.addEventListener('DOMContentLoaded', () => {
     app.pitch = new Pitch(el.canvas, el.stage); Touch.init(el.stage); PhoneView.apply(app.pitch);
+    const vm = document.querySelector('meta[name="app-version"]'); if (vm) $('#appVersion').textContent = 'v' + vm.content; // so a phone can tell which build it is running
     bindInput(); show(el.menu); requestAnimationFrame(frame);
     const room = new URLSearchParams(location.search).get('room'); if (room && Net.available()) openOnline(room.toUpperCase());
     window.__app = app;

@@ -16,7 +16,7 @@
       this.app.setPossession(null); this.app.setCombo(null); this.app.setScore(0);
       this.app.coach(this.variant === 'attack'
         ? (Touch.isTouchDevice() ? 'You are the STRIKER. Stay onside, then tap PASS to call for the ball!' : 'You are the STRIKER. Stay onside, then press SPACE (or the PASS button) to call for the ball!')
-        : (Touch.isTouchDevice() ? 'You control the BACK LINE. Drag left to step up, right to drop. Catch the striker offside, or drop to cover!' : 'You control the BACK LINE. Watch the striker — step up to catch him offside, or drop to cover!'), 'info');
+        : (Touch.isTouchDevice() ? 'You are the DEFENDER nearest the striker. Stay tight on him! Drag left to step up with your line, right to drop.' : 'You are the DEFENDER nearest the striker. Stay tight on him! Step up to catch him offside, or drop to cover.'), 'info');
       Touch.enable(true, this.variant === 'attack' ? ['pass'] : []); Touch.actions.pass = () => this.requestPass();
       this.explainAfter = null;
       this.nextRound(true);
@@ -28,7 +28,7 @@
     }
     snapNow(extra) {
       const att = this.variant === 'attack' ? this.me : this.striker, atk = this.variant === 'attack';
-      const players = [{ ...this.gk, team: atk ? 1 : 0, gk: true }, ...this.defs.map((d, i) => ({ ...d, team: atk ? 1 : 0, me: !atk, label: !atk && i === 0 ? 'YOUR LINE' : '' })), { ...this.passer, team: atk ? 0 : 1, label: 'PASSER' }, { ...att, team: atk ? 0 : 1, me: atk, focus: true, label: atk ? 'YOU' : 'STRIKER' }];
+      const players = [{ ...this.gk, team: atk ? 1 : 0, gk: true }, ...this.defs.map((d, i) => ({ ...d, team: atk ? 1 : 0, me: !atk && i === this.meIdx, label: !atk && i === this.meIdx ? 'YOU' : '' })), { ...this.passer, team: atk ? 0 : 1, label: 'PASSER' }, { ...att, team: atk ? 0 : 1, me: atk, focus: true, label: atk ? 'YOU' : 'STRIKER' }];
       return { players, ball: { x: this.ball.x, y: this.ball.y }, dir: 1, ...extra };
     }
 
@@ -39,7 +39,9 @@
       this.phase = 'play'; this.playT = 0; this.verdict = null; this.flight = null; this.app.hideVerdict();
       this.special = this.round === 4 ? (this.variant === 'attack' ? 'throwin' : 'goalkick') : null;
       const lineX = rnd(68, 78);
-      this.defs = DEF_Y.map(y => ({ x: lineX, y: y + rnd(-1, 1) }));
+      // A real back line is never dead straight: each defender drifts a couple of meters off the line, so the 2nd-last defender (and the dotted line) keeps changing.
+      this.defs = DEF_Y.map(y => ({ x: lineX, y: y + rnd(-1, 1), off: rnd(-1.5, 1.5), phase: rnd(0, 6), rate: rnd(0.5, 1.1) }));
+      this.lineBase = lineX;
       this.gk = { x: 101.5, y: 34 };
       this.passer = { x: rnd(50, 56), y: rnd(22, 46), wind: 0, phase: rnd(0, 6) };
       this.ball = { x: this.passer.x + 0.8, y: this.passer.y, z: 0, spin: 0 };
@@ -52,6 +54,9 @@
       } else {
         this.lineX = lineX; this.defs.forEach(d => d.x = lineX);
         this.striker = { x: lineX - rnd(2, 5), y: rnd(22, 46), runSpeed: 0, running: false };
+        // you are the defender nearest the striker; the other three follow your lead, a beat late and never in a perfect line
+        this.meIdx = DEF_Y.reduce((best, y, i) => Math.abs(y - this.striker.y) < Math.abs(DEF_Y[best] - this.striker.y) ? i : best, 0);
+        this.me = this.defs[this.meIdx]; this.me.off = 0; this.me.y = this.striker.y + rnd(-2, 2);
         if (this.special === 'goalkick') { this.passer = { x: 6, y: 34, wind: 0, phase: 0 }; this.ball = { x: 7, y: 34, z: 0, spin: 0 }; this.kickIn = rnd(2.5, 4); this.earlyRun = true; this.runLead = rnd(0.6, 1.2); this.app.coach('GOAL KICK coming. No offside from a goal kick, so the trap cannot work. DROP and cover the striker!', 'info'); }
         this.decoys = [{ x: lineX - 6, y: 8 }, { x: lineX - 6, y: 60 }];
         this.kickIn = rnd(3.5, 7); this.windup = 0.9; this.earlyRun = Math.random() < 0.5; this.runLead = this.earlyRun ? rnd(0.35, 0.8) : rnd(-0.05, 0.1);
@@ -71,6 +76,7 @@
       if (down && (code === 'Space' || code === 'Enter') && this.variant === 'attack') this.requestPass();
     }
     requestPass() { if (this.phase === 'play' && this.variant === 'attack') this.kick(); }
+    tight() { return this.variant === 'defend' && L.dist(this.me, this.striker) <= 3.5 && this.me.x >= this.striker.x - 0.5; } // close to the striker AND goal-side of him
 
     // ---------- the moment of the kick ----------
     kick() {
@@ -86,7 +92,7 @@
         else { word = 'ONSIDE ✓ (throw-in)'; kind = 'meh'; why = 'Fine, but you could have gone even deeper: there is NO offside from a throw-in. +80'; pts = 80; this.outcome = 'goal'; this.explainAfter = { key: 'off-throwin', title: 'No offside from a throw-in', text: 'You stayed behind the defenders out of habit. On a throw-in (and goal kicks and corners) the offside rule is switched off, so you can wait behind the whole defense. Use it!', lesson: 'Throw-in, goal kick, corner: no offside.' }; }
       } else if (this.special === 'goalkick') {
         Rules.record('off-goalkick', m >= 2.5); this.verdict = { ...v, offside: false, reason: 'goal kick' };
-        if (m >= 2.5) { word = 'COVERED ✓ (no offside on a goal kick)'; kind = 'good'; why = `You dropped and kept ${mTxt} of cover. Right call: the trap cannot work on a goal kick. +150`; pts = 150; this.covered++; this.outcome = 'covered'; }
+        if (m >= 2.5 || this.tight()) { word = 'COVERED ✓ (no offside on a goal kick)'; kind = 'good'; why = m >= 2.5 ? `You dropped and kept ${mTxt} of cover. Right call: the trap cannot work on a goal kick. +150` : 'You stayed tight on the striker. Right call: the trap cannot work on a goal kick. +150'; pts = 150; this.covered++; this.outcome = 'covered'; }
         else { word = 'HE\u2019S THROUGH — NO OFFSIDE ✗'; kind = 'bad'; why = 'You stepped up, but there is no offside from a goal kick. The striker is clean through.'; this.outcome = 'conceded'; this.explainAfter = { key: 'off-goalkick', title: 'No offside from a goal kick', text: 'On a goal kick (and corners and throw-ins) the offside rule is switched off, so stepping up does nothing. Drop, stay goal-side of the striker, and cover.', lesson: 'Never try the trap on a goal kick.' }; }
       } else if (this.variant === 'attack') {
         if (v.offside) { word = 'OFFSIDE!'; kind = 'bad'; why = `You were ${mTxt} past the last defender when the ball was kicked. Wait a split second longer!`; this.offsides++; this.outcome = 'flag'; }
@@ -100,7 +106,13 @@
       } else {
         if (v.offside) { word = 'OFFSIDE TRAP!'; kind = 'good'; why = `The striker was ${mTxt} past your line when the ball was kicked. Flag up — great defending! +150`; pts = 150; this.traps++; this.outcome = 'flag'; }
         else if (v.reason === 'own-half') { word = 'NO OFFSIDE HERE'; kind = 'meh'; why = "You pushed past halfway — a player can't be offside in his own half! Hold a deeper line."; this.outcome = m < 2.5 ? 'conceded' : 'covered'; pts = this.outcome === 'covered' ? 40 : 0; }
-        else if (m < 2.5) { word = v.reason === 'level' ? 'LEVEL = ONSIDE' : 'HE’S THROUGH!'; kind = 'bad'; why = v.reason === 'level' ? 'Level with your last defender counts as ONSIDE. He is in on goal!' : `Only ${mTxt} between him and your line — he beat you to the ball.`; this.outcome = 'conceded'; }
+        else if (this.tight()) { const pTxt = L.dist(this.me, this.striker).toFixed(1); word = 'MARKED TIGHT ✓'; kind = 'good'; why = `Onside, but you were only ${pTxt} m from him and goal-side: you win the ball. +100`; pts = 100; this.covered++; this.outcome = 'covered'; }
+        else if (m < 2.5) {
+          const pTxt = L.dist(this.me, this.striker).toFixed(1), past = this.striker.x - this.me.x; kind = 'bad'; this.outcome = 'conceded';
+          if (past > 0.5) { word = 'HE’S PAST YOU!'; why = `At the kick he was already ${past.toFixed(1)} m goal-side of you. Stay between him and the goal!`; }
+          else if (v.reason === 'level') { word = 'LEVEL = ONSIDE'; why = `Level with the 2nd-last defender counts as ONSIDE, and you were ${pTxt} m away. He is in on goal!`; }
+          else { word = 'HE’S THROUGH!'; why = `Only ${mTxt} between him and your line, and you were ${pTxt} m from him — he beat you to the ball.`; }
+        }
         else { word = 'COVERED ✓'; kind = 'good'; why = `Striker was ${mTxt} behind your line — onside, but your defender gets there first. +60`; pts = 60; this.covered++; this.outcome = 'covered'; }
       }
       if (this.outcome === 'conceded') this.conceded++;
@@ -112,7 +124,7 @@
         if (v.offside) this.explainAfter = { key: 't-off', title: 'Offside! 🚩', text: `${checklist} All three were true, so the flag went up — you were ${mTxt} past the line when the ball was kicked. Hover ON the line and go the instant the ball is played.`, lesson: 'Start your run when the ball is kicked, not before.', snap };
         else if (this.outcome === 'caught') this.explainAfter = { key: 't-safe', title: 'Too far from the line 🐢', text: `You were onside, but ${mTxt} behind the defenders. By the time the ball arrived they had caught up. Get closer to the line: level with the last defender is still ONSIDE.`, lesson: 'Level = onside. Play on the shoulder of the last defender.', snap };
       } else {
-        if (this.outcome === 'conceded') this.explainAfter = { key: 't-through', title: v.reason === 'level' ? 'Level = onside 🟰' : 'He got through 😖', text: `${checklist} ${v.reason === 'level' ? 'He was exactly LEVEL with your line, and level counts as onside.' : `Only ${mTxt} between him and your line, so he was onside and faster.`} Next time: when the PASS COMING bar fills, either STEP UP together so he is past your line, or DROP early to keep 3+ m of cover.`, lesson: 'Decide early: step up to trap, or drop to cover.', snap };
+        if (this.outcome === 'conceded') this.explainAfter = { key: 't-through', title: v.reason === 'level' ? 'Level = onside 🟰' : 'He got through 😖', text: `${checklist} ${v.reason === 'level' ? 'He was exactly LEVEL with your line, and level counts as onside.' : `Only ${mTxt} between him and your line, so he was onside and faster.`} Next time: stay within 3 steps of him and goal-side, and when the PASS COMING bar fills either STEP UP so he is past the 2nd-last defender, or DROP early to keep 3+ m of cover.`, lesson: 'Stay tight on your striker. Decide early: step up to trap, or drop to cover.', snap };
         else if (v.reason === 'own-half') this.explainAfter = { key: 't-half', title: 'The trap cannot work here ⚠️', text: `${checklist} Your line was past the halfway line. A player can never be offside in his own half, so stepping up there does nothing. Keep your line in your own half.`, lesson: 'Never hold your line past halfway.', snap };
       }
       this.app.verdict(word, why, kind);
@@ -134,7 +146,7 @@
       const P = this.app.pitch; P.t += dt;
       if (window.PhoneView && PhoneView.active() && this.ball) { // Pocket view: the runner, the ball, the passer and the defensive line
         const a = this.variant === 'attack' ? this.me : this.striker;
-        P.actionCam(dt, [a, this.ball, this.passer].concat(this.defs || []), { focus: a, minScale: 7, maxScale: 12 });
+        P.actionCam(dt, [a, this.me, this.ball, this.passer].concat(this.defs || []), { focus: this.me || a, minScale: 7, maxScale: 12 });
       }
       if (Explain.paused) return;
       if (this.phase === 'play') { this.updatePlay(dt); const R = this.rulesNow(); this.app.setRules(R); this.liveOffside = R.offside; }
@@ -159,26 +171,25 @@
         // defenders' line wanders, sometimes steps up fast
         this.lineTimer -= dt;
         if (this.lineTimer <= 0) { this.lineTarget = L.clamp(this.lineTarget + (Math.random() < 0.35 ? rnd(4, 8) : rnd(-7, 4)), 64, 84); this.lineTimer = rnd(1.2, 2.6); this.lineSpeed = rnd(2.5, 6); }
-        for (const d of this.defs) { const dx = this.lineTarget - d.x; d.x += Math.sign(dx) * Math.min(Math.abs(dx), (this.lineSpeed || 3) * dt); }
-        // defenders shadow the striker a little
-        const lx = this.defs[0].x; this.defs.forEach((d, i) => { d.y += (DEF_Y[i] + (this.me.y - 34) * 0.25 - d.y) * dt * 1.5; });
+        { const dx = this.lineTarget - this.lineBase; this.lineBase += Math.sign(dx) * Math.min(Math.abs(dx), (this.lineSpeed || 3) * dt); }
+        // a ragged line: each defender wanders a little off the line; the one nearest you marks you tighter (shadows your y more)
+        const marker = this.defs.reduce((b, d, i) => Math.abs(d.y - this.me.y) < Math.abs(this.defs[b].y - this.me.y) ? i : b, 0);
+        this.defs.forEach((d, i) => { d.off = L.clamp(d.off + Math.sin(this.playT * d.rate + d.phase) * 1.8 * dt, -2.5, 2.5); d.x = this.lineBase + d.off; d.y += (DEF_Y[i] + (this.me.y - 34) * (i === marker ? 0.6 : 0.25) - d.y) * dt * 1.5; });
+        const lx = this.lineBase;
         this.wingers.forEach(w => { w.x += ((lx - 3.5) - w.x) * dt * 2; });
         this.moveMe(this.me, dt, 7);
         this.patience -= dt;
         if (this.patience <= 0) { this.app.coach('The passer could not wait any longer!', 'info'); this.kick(); }
       } else {
-        // my back line
-        const k = this.keys; let v = 0;
-        if (k.ArrowLeft || k.KeyA || k.ArrowUp || k.KeyW) v -= 1; if (k.ArrowRight || k.KeyD || k.ArrowDown || k.KeyS) v += 1;
-        if (!v && Touch.enabled) v = Touch.vec.x;
-        if (v) { this.lineX += v * 7 * dt; this.dest = null; } else if (this.dest) { const dx = this.dest.x - this.lineX; this.lineX += Math.sign(dx) * Math.min(Math.abs(dx), 7 * dt); }
-        this.lineX = L.clamp(this.lineX, 48, 98);
-        this.defs.forEach((d, i) => { d.x = this.lineX; d.y += (DEF_Y[i] + (this.striker.y - 34) * 0.3 - d.y) * dt * 2; });
-        // striker: hovers just onside, then bursts
-        const s = this.striker, timeToKick = this.kickIn - this.playT;
+        // you move one defender (both directions); your line follows your lead a beat late, and never dead straight
+        this.moveMe(this.me, dt, 7); this.me.x = L.clamp(this.me.x, 48, 98);
+        this.lineX += (this.me.x - this.lineX) * Math.min(1, dt * 2.2);
+        this.defs.forEach((d, i) => { if (i === this.meIdx) return; d.off = L.clamp(d.off + Math.sin(this.playT * d.rate + d.phase) * 1.8 * dt, -2.5, 2.5); d.x = this.lineX + d.off; d.y += (DEF_Y[i] + (this.striker.y - 34) * 0.3 - d.y) * dt * 2; });
+        // striker: hovers just onside of the REAL line (the 2nd-last defender), drifts away from you, then bursts
+        const s = this.striker, timeToKick = this.kickIn - this.playT, liveLine = this.rulesNow().lineX;
         if (!s.running && timeToKick <= this.runLead) { s.running = true; }
         if (s.running) { s.x += 7.5 * dt; }
-        else { const want = this.lineX - 1.5; s.x += L.clamp(want - s.x, -4 * dt, 4 * dt); s.y += Math.sin(this.playT * 1.3) * 1.5 * dt; }
+        else { const want = liveLine - 1.5; s.x += L.clamp(want - s.x, -4 * dt, 4 * dt); s.y += (Math.sin(this.playT * 1.3) * 1.5 + Math.sign(s.y - this.me.y || 1) * 0.8) * dt; s.y = L.clamp(s.y, 6, F.h - 6); }
         s.x = L.clamp(s.x, 45, 100);
         this.decoys.forEach(d => { d.x += ((this.lineX - 6) - d.x) * dt * 2; });
         this.passer.wind = L.clamp(1 - timeToKick / this.windup, 0, 1);
@@ -222,9 +233,9 @@
         stats = [{ k: 'Goals', v: this.goals }, { k: 'Razor sharp', v: this.sharp }, { k: 'Offsides', v: this.offsides }];
       } else {
         pct = Math.round(100 * this.points / (ROUNDS * 150));
-        fb = this.conceded >= 4 ? { face: '🛡️', text: 'The striker got through too often. When the passer winds up, decide fast: STEP UP together or DROP and cover.' }
-          : this.traps >= 4 ? { face: '🪤', text: 'Master of the offside trap! You moved as ONE line at the perfect moment.' }
-          : { face: '👍', text: 'Solid defending. The trap works best when the striker is already drifting past your line.' };
+        fb = this.conceded >= 4 ? { face: '🛡️', text: 'The striker got through too often. Stay within 3 steps of him, and when the passer winds up decide fast: STEP UP or DROP and cover.' }
+          : this.traps >= 4 ? { face: '🪤', text: 'Master of the offside trap! You stepped up at the perfect moment and your line followed.' }
+          : { face: '👍', text: 'Solid defending. Stay tight on your striker; the trap works best when he is already drifting past the 2nd-last defender.' };
         stats = [{ k: 'Offside traps', v: this.traps }, { k: 'Covered', v: this.covered }, { k: 'Conceded', v: this.conceded }];
       }
       this.app.showPass(false); Touch.enable(false); this.app.setRules(null);
@@ -240,7 +251,12 @@
       if (this.phase === 'play') {
         const on = attacker.x <= liveLine + 0.05 || attacker.x <= this.ball.x;
         P.vline(liveLine, on ? 'rgba(182,255,59,.5)' : 'rgba(255,90,90,.75)', 2.5, [6, 10], '2ND-LAST DEFENDER');
-        if (this.variant === 'defend') { P.textM(this.lineX, -2.2, '◀ STEP UP      DROP ▶', '#fff', 1.5); }
+        if (this.variant === 'defend') { // your marking bubble: green while the striker is inside it and you are goal-side
+          const t = this.tight(), past = this.striker.x - this.me.x > 0.5, col = t ? '#b6ff3b' : past ? '#ff5a5a' : '#ffd23f';
+          P.ring(this.me.x, this.me.y, 3.5, t ? 'rgba(182,255,59,.75)' : past ? 'rgba(255,90,90,.7)' : 'rgba(255,210,63,.6)', { dash: [6, 6], width: 2, glow: t ? 'rgba(182,255,59,.18)' : null });
+          P.textM(this.me.x, this.me.y - 4.6, t ? 'TIGHT ✓' : past ? 'HE’S PAST YOU!' : 'STAY TIGHT!', col, 1.4);
+          P.textM(liveLine, F.h + 2.4, '◀ STEP UP      DROP ▶', '#fff', 1.5);
+        }
       }
       if (this.verdict && this.phase !== 'play') {
         c.fillStyle = 'rgba(0,0,20,.35)'; c.fillRect(0, 0, P.cssW, P.cssH);
@@ -253,7 +269,7 @@
       }
       // players
       P.drawPlayer(this.gk, { team: 'gk', number: 1 });
-      this.defs.forEach((d, i) => P.drawPlayer(d, { team: this.variant === 'attack' ? 'them' : 'us', number: i + 2, me: this.variant === 'defend', label: this.variant === 'defend' && i === 0 ? 'YOUR LINE' : undefined, labelColor: '#b6ff3b' }));
+      this.defs.forEach((d, i) => { const mine = this.variant === 'defend' && i === this.meIdx; P.drawPlayer(d, { team: this.variant === 'attack' ? 'them' : 'us', number: i + 2, me: mine, label: mine ? 'YOU' : undefined, labelColor: '#b6ff3b' }); });
       const attTeam = this.variant === 'attack' ? 'us' : 'them';
       (this.variant === 'attack' ? this.wingers : this.decoys).forEach((w, i) => P.drawPlayer(w, { team: attTeam, number: 7 + i * 4 }));
       P.drawPlayer(this.passer, { team: attTeam, number: 8, hasBall: this.phase === 'play' });

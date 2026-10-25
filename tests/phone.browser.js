@@ -114,6 +114,22 @@ async function backToMenu(page) {
   s = await dpage.evaluate(state); log('desktop match:', JSON.stringify(s));
   check(!s.phone, 'desktop: Pocket view stays off');
   check(s.cam === null && s.canvas[0] < s.stage[0] - 20, `desktop: full-field camera, field keeps its shape (${s.canvas.join('x')} in ${s.stage.join('x')})`);
+  check(await dpage.$eval('#appVersion', e => /^v\d+\.\d+\.\d+$/.test(e.textContent)), 'desktop: the menu shows the build version');
+  await backToMenu(dpage);
+  // offside trainer: the back line is ragged (never a perfect straight line) and, as a defender, you are one player in it
+  const lineInfo = async () => dpage.evaluate(() => { const m = window.__app.mode; const xs = m.defs.map(d => +d.x.toFixed(2)); return { xs, spread: +(Math.max(...xs) - Math.min(...xs)).toFixed(2), meIdx: m.meIdx, meIsDef: m.me === m.defs[m.meIdx], lineX: +m.rulesNow().lineX.toFixed(2) }; });
+  await startMatch(dpage, 'attack'); await dpage.waitForTimeout(2500);
+  let li = await lineInfo(); log('striker drill line:', JSON.stringify(li));
+  check(li.spread >= 0.8, `Striker Timing: defenders are ${li.spread} m apart front-to-back, not a straight line`);
+  await backToMenu(dpage);
+  await startMatch(dpage, 'defend'); await dpage.waitForTimeout(1500);
+  li = await lineInfo(); log('defender drill line:', JSON.stringify(li));
+  check(li.meIsDef && li.meIdx >= 0, `Defender Trap: you are defender #${li.meIdx + 2}, one player in the line`);
+  await dpage.keyboard.down('ArrowLeft'); await dpage.waitForTimeout(900); await dpage.keyboard.up('ArrowLeft'); await dpage.waitForTimeout(300);
+  const li2 = await lineInfo(); log('defender drill after stepping up:', JSON.stringify(li2));
+  check(li2.xs[li2.meIdx] < li.xs[li.meIdx] - 3, 'Defender Trap: stepping up moves YOUR defender');
+  check(li2.spread >= 0.8, `Defender Trap: your line followed but stayed ragged (${li2.spread} m front-to-back)`);
+  check(Math.abs(li2.lineX - Math.max(...li2.xs)) < 0.01, `Defender Trap: the dotted line sits on the 2nd-last defender (keeper is last) at x=${li2.lineX}`);
   await dctx.close(); await browser.close(); if (server) server.proc.kill();
 
   check(pageErrors.length === 0, 'no page errors' + (pageErrors.length ? ': ' + pageErrors.join(' | ') : ''));

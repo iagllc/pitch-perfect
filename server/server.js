@@ -1,7 +1,8 @@
 /* Pitch Perfect online server: serves the game + runs authoritative matches in rooms over WebSockets. */
 'use strict';
-const http = require('http'), fs = require('fs'), path = require('path');
+const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const WebSocket = require('ws');
+const VERSION = require('../package.json').version;
 const { MatchSim } = require('../js/sim.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -13,7 +14,14 @@ const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const file = path.normalize(path.join(ROOT, p));
   if (!file.startsWith(ROOT) || file.includes(path.sep + 'server' + path.sep) || file.includes('node_modules')) { res.writeHead(403); return res.end(); }
-  fs.readFile(file, (err, data) => { if (err) { res.writeHead(404); return res.end('Not found'); } res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(data); });
+  fs.readFile(file, (err, data) => {
+    if (err) { res.writeHead(404); return res.end('Not found'); }
+    // index.html gets versioned asset URLs (js/x.js?v=2.2.0) so a phone that cached the old scripts fetches the new ones after an update.
+    if (p === '/index.html') data = Buffer.from(data.toString().replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSION}"`).replace('</head>', `  <meta name="app-version" content="${VERSION}">\n</head>`));
+    const etag = '"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); return res.end(); }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', ETag: etag }); res.end(data);
+  });
 });
 const wss = new WebSocket.Server({ server });
 
