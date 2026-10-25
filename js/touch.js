@@ -43,7 +43,7 @@
           if (this.fixed) { dx *= R / d; dy *= R / d; d = R; } // fixed stick: full speed in that direction, the base stays put
           else { const k = (d - R) / d; this.ox += dx * k; this.oy += dy * k; dx *= R / d; dy *= R / d; d = R; this.place(this.base, this.ox - r.left, this.oy - r.top); } // floating: the base follows the thumb
         }
-        const mag = d <= this.dead ? 0 : Math.min(1, (d - this.dead) / (R - this.dead));
+        const mag = d <= this.dead ? 0 : this.fixed ? 1 : Math.min(1, (d - this.dead) / (R - this.dead)); // fixed pad is digital: past the dead zone = full speed
         this.vec = d > 0 ? { x: dx / d * mag, y: dy / d * mag } : { x: 0, y: 0 };
         this.place(this.knob, this.ox + dx - r.left, this.oy + dy - r.top);
       };

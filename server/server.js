@@ -3,6 +3,8 @@
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const WebSocket = require('ws');
 const VERSION = require('../package.json').version;
+// Asset version = package version + a hash of every js/css file, so each build (not just each version bump) gets fresh URLs on phones.
+const ASSET_V = (() => { const h = crypto.createHash('sha1'); for (const d of ['js', 'css']) for (const f of fs.readdirSync(path.join(__dirname, '..', d)).sort()) h.update(fs.readFileSync(path.join(__dirname, '..', d, f))); return VERSION + '+' + h.digest('hex').slice(0, 6); })();
 const { MatchSim } = require('../js/sim.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -17,7 +19,7 @@ const server = http.createServer((req, res) => {
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
     // index.html gets versioned asset URLs (js/x.js?v=2.2.0) so a phone that cached the old scripts fetches the new ones after an update.
-    if (p === '/index.html') data = Buffer.from(data.toString().replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${VERSION}"`).replace('</head>', `  <meta name="app-version" content="${VERSION}">\n</head>`));
+    if (p === '/index.html') data = Buffer.from(data.toString().replace(/(src|href)="((?:js|css)\/[^"?]+)"/g, `$1="$2?v=${ASSET_V}"`).replace('</head>', `  <meta name="app-version" content="${ASSET_V}">\n</head>`));
     const etag = '"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
     const inm = (req.headers['if-none-match'] || '').split(',').map(s => s.trim().replace(/^W\//, '')); // a CDN in front may weaken the tag to W/"…"
     if (inm.includes(etag)) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); return res.end(); }

@@ -12,8 +12,8 @@
   const settings = { role: 'CM', difficulty: 'rookie', team: 0, name: '', avatar: null, camera: 'full' };
   try { Object.assign(settings, JSON.parse(localStorage.getItem('pp-settings') || '{}')); } catch (e) {}
   // Game speed: slow motion for small screens and young players, so there is time to move and read the coach. Online matches run at full speed.
-  const SPEEDS = { slow: 0.55, normal: 0.8, full: 1 };
-  if (!SPEEDS[settings.speed]) settings.speed = (window.PhoneView && PhoneView.active()) ? 'slow' : 'full';
+  const SPEEDS = { slow: 0.7, normal: 0.85, full: 1 };
+  if (!SPEEDS[settings.speed] || settings.speedV !== 2) { settings.speed = (window.PhoneView && PhoneView.active()) ? 'normal' : 'full'; settings.speedV = 2; } // speedV: re-pick the default when the speeds change
   const applyAvatar = () => {
     window.__myAvatar = settings.avatar || Avatars.defaultAvatar('kid', 'm'); window.__avatarSet = window.__myAvatar.set;
     const teen = window.__avatarSet === 'teen'; document.documentElement.dataset.theme = teen ? 'teen' : 'kid';

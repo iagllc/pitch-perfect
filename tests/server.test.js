@@ -14,13 +14,14 @@ const get = (port, p, headers = {}) => new Promise((res, rej) => { http.get({ ho
   const proc = spawn(process.execPath, [path.join(__dirname, '..', 'server', 'server.js')], { env: { ...process.env, PORT: String(port) }, stdio: ['ignore', 'pipe', 'inherit'] });
   await new Promise((res, rej) => { proc.stdout.on('data', d => { if (String(d).includes('running')) res(); }); proc.on('exit', c => rej(new Error('server exited ' + c))); setTimeout(() => rej(new Error('server start timeout')), 8000); });
   console.log('\nSTATIC SERVER');
-  await test(`index.html links scripts and styles with ?v=${VERSION}`, async () => {
+  let assetV = null;
+  await test(`index.html carries the build version (${VERSION}+hash) in a meta tag`, async () => { const r = await get(port, '/'); const m = r.body.match(/<meta name="app-version" content="([^"]+)">/); ok(m && m[1].startsWith(VERSION + '+') && /\+[0-9a-f]{6}$/.test(m[1]), 'meta: ' + (m && m[1])); assetV = m[1]; });
+  await test('index.html links every script and style with ?v=<build version>', async () => {
     const r = await get(port, '/'); ok(r.status === 200, 'status ' + r.status);
     const links = r.body.match(/(?:src|href)="(?:js|css)\/[^"]+"/g) || []; ok(links.length >= 10, 'found ' + links.length + ' asset links');
-    const stale = links.filter(l => !l.endsWith(`?v=${VERSION}"`)); ok(stale.length === 0, 'unversioned: ' + stale.join(' '));
+    const stale = links.filter(l => !l.endsWith(`?v=${assetV}"`)); ok(stale.length === 0, 'unversioned: ' + stale.join(' '));
   });
-  await test('index.html carries the version in a meta tag', async () => { const r = await get(port, '/'); ok(r.body.includes(`<meta name="app-version" content="${VERSION}">`)); });
-  await test('a versioned script URL serves the script', async () => { const r = await get(port, `/js/main.js?v=${VERSION}`); ok(r.status === 200 && /javascript/.test(r.headers['content-type']) && r.body.includes('PhoneView')); });
+  await test('a versioned script URL serves the script', async () => { const r = await get(port, `/js/main.js?v=${assetV}`); ok(r.status === 200 && /javascript/.test(r.headers['content-type']) && r.body.includes('PhoneView')); });
   await test('responses carry an ETag and no-cache, and a matching If-None-Match gets a 304', async () => {
     const r = await get(port, '/js/rules.js'); ok(r.headers.etag && r.headers['cache-control'] === 'no-cache', 'headers ' + JSON.stringify(r.headers));
     const r2 = await get(port, '/js/rules.js', { 'If-None-Match': r.headers.etag }); ok(r2.status === 304 && r2.body === '', 'status ' + r2.status);

@@ -78,7 +78,7 @@ async function backToMenu(page) {
   await startMatch(page, 'match');
   // game speed: slow motion by default on a phone (engine steps per 2s: 120 at full speed, about 66 at Slow)
   const sp = await stepsIn2s(page); log('phone speed:', JSON.stringify(sp));
-  check(sp.speed === 'slow' && sp.scale === 0.55 && sp.steps > 50 && sp.steps < 85, `phone speed: Slow by default, ${sp.steps} engine steps in 2s (120 would be full speed)`);
+  check(sp.speed === 'normal' && sp.scale === 0.85 && sp.steps > 88 && sp.steps < 115, `phone speed: Normal (0.85x) by default, ${sp.steps} engine steps in 2s (120 would be full speed)`);
   let s = await page.evaluate(state); log('phone match:', JSON.stringify(s));
   check(s.canvas[0] >= s.stage[0] - 2 && s.canvas[1] >= s.stage[1] - 2, `phone match: canvas fills the stage (${s.canvas.join('x')} of ${s.stage.join('x')})`);
   check(s.scale >= 7.5 && s.scale <= 13.5, `phone match: zoomed to ${s.scale} px per meter (want 7.5–13)`);
@@ -96,6 +96,9 @@ async function backToMenu(page) {
   const v2 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), y: +Touch.vec.y.toFixed(2) }));
   check(v2.y < -0.9 && v2.x > 0 && v2.x < 0.3, `phone joystick: sliding above the pad steers up (${JSON.stringify(v2)})`);
   await page.mouse.up(); await page.waitForTimeout(80);
+  await page.mouse.move(st.x + joy.left, st.y + joy.top); await page.mouse.down(); await page.mouse.move(st.x + joy.left + 6, st.y + joy.top, { steps: 2 }); await page.waitForTimeout(80);
+  const v4 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2) })); await page.mouse.up(); await page.waitForTimeout(80);
+  check(v4.x === 1, `phone joystick: a 6px nudge from the pad center is already full speed (digital), got ${v4.x}`);
   const v3 = await page.evaluate(() => { const b = document.querySelector('.joy-base'); return { x: Touch.vec.x, idle: b.classList.contains('idle'), left: parseFloat(b.style.left) }; });
   check(v3.x === 0 && v3.idle && Math.abs(v3.left - joy.left) < 1, 'phone joystick: letting go stops the player and the pad is still in place');
   await page.waitForTimeout(3000); const s2 = await page.evaluate(state); check(s2.cam && s2.scale >= 7.5, `phone match: still framing the action 3s later (${s2.scale} px/m)`);
@@ -125,7 +128,7 @@ async function backToMenu(page) {
   s = await dpage.evaluate(state); log('desktop match:', JSON.stringify(s));
   check(!s.phone, 'desktop: Pocket view stays off');
   check(s.cam === null && s.canvas[0] < s.stage[0] - 20, `desktop: full-field camera, field keeps its shape (${s.canvas.join('x')} in ${s.stage.join('x')})`);
-  check(await dpage.$eval('#appVersion', e => /^v\d+\.\d+\.\d+$/.test(e.textContent)), 'desktop: the menu shows the build version');
+  check(await dpage.$eval('#appVersion', e => /^v\d+\.\d+\.\d+\+[0-9a-f]{6}$/.test(e.textContent)), 'desktop: the menu shows the build version (' + await dpage.$eval('#appVersion', e => e.textContent) + ')');
   const dsp = await stepsIn2s(dpage); log('desktop speed:', JSON.stringify(dsp));
   check(dsp.speed === 'full' && dsp.steps > 100 && dsp.steps < 135, `desktop speed: Full by default, ${dsp.steps} engine steps in 2s`);
   await backToMenu(dpage);
