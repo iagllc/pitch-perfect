@@ -146,6 +146,14 @@ async function backToMenu(page) {
   check(li2.xs[li2.meIdx] < li.xs[li.meIdx] - 3, 'Defender Trap: stepping up moves YOUR defender');
   check(li2.spread >= 0.8, `Defender Trap: your line followed but stayed ragged (${li2.spread} m front-to-back)`);
   check(Math.abs(li2.lineX - Math.max(...li2.xs)) < 0.01, `Defender Trap: the dotted line sits on the 2nd-last defender (keeper is last) at x=${li2.lineX}`);
+  await backToMenu(dpage);
+  // Shape Shift: a player who stands still must still receive a pass aimed at them (no false "ball rolled past you")
+  await startMatch(dpage, 'spacing', 4500);
+  await dpage.evaluate(() => { const m = window.__app.mode; const orig = m.choosePass.bind(m); m.choosePass = () => (m.holder && m.holder.team === 'us') ? { p: m.me, i: m.meIdx } : orig(); }); // every one of our passes goes to me
+  await dpage.waitForTimeout(9000);
+  const ss = await dpage.evaluate(() => { const m = window.__app.mode; return { received: m.received, rolled: !!m.explained['drill-roll'], poss: m.poss }; });
+  log('shape shift:', JSON.stringify(ss));
+  check(ss.received >= 1 && !ss.rolled, `Shape Shift: standing still, I received ${ss.received} pass(es) and was never told the ball rolled past me`);
   await dctx.close(); await browser.close(); if (server) server.proc.kill();
 
   check(pageErrors.length === 0, 'no page errors' + (pageErrors.length ? ': ' + pageErrors.join(' | ') : ''));

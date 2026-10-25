@@ -90,7 +90,9 @@
     kickPass() {
       const team = this.holder.team, c = this.choosePass(); if (!c) { this.holdTimer = 0.6; return; }
       const from = { x: this.ball.x, y: this.ball.y };
-      let to = { x: c.p.x + (c.p.target.x - c.p.x) * 0.35, y: c.p.y + (c.p.target.y - c.p.y) * 0.35 };
+      // aim a little ahead of the receiver, toward his spot, but never more than 3 m from where he stands: a player who stays put must still be able to receive it
+      const lx = c.p.target.x - c.p.x, ly = c.p.target.y - c.p.y, ld = Math.hypot(lx, ly) || 1, lead = Math.min(3, ld * 0.35);
+      let to = { x: c.p.x + lx / ld * lead, y: c.p.y + ly / ld * lead };
       let receiver = { team, idx: c.i }, intercepted = false;
       // interceptions: teach that possession changes happen
       const stealChance = team === 'us' ? 0.14 : (this.theirPasses >= 3 ? 1 : 0.3);
@@ -104,19 +106,33 @@
       this.holder = null; this.app.sfx.kick(); this.app.fx.dust(from.x, from.y);
       if (team === 'them') this.theirPasses++;
     }
+    receiveMe(pts, popup, say) {
+      this.received++; this.points += pts; this.app.sfx.receive(); this.app.sfx.perfect();
+      this.app.fx.text(this.me.x, this.me.y - 3, popup, '#b6ff3b', 2); this.app.fx.burst(this.me.x, this.me.y, ['#b6ff3b', '#fff'], 18, 8);
+      this.app.coach(say, 'good'); this.msgCool = 3;
+    }
+    updateRoll(dt) { // a pass to you that landed short or wide keeps rolling: meet it and it is yours, ignore it and they take it
+      const r = this.ball.roll; r.t += dt; r.speed = Math.max(0, r.speed - 4.5 * dt);
+      this.ball.x = L.clamp(this.ball.x + r.ux * r.speed * dt, 1, F.w - 1); this.ball.y = L.clamp(this.ball.y + r.uy * r.speed * dt, 1, F.h - 1); this.ball.spin += dt * 10;
+      const d = L.dist(this.me, this.ball); r.minD = Math.min(r.minD, d);
+      if (d < 2.4) { this.ball.roll = null; this.receiveMe(30, '+30 Went and got it!', 'You went to meet the pass. Good! ⚽'); this.holder = { team: 'us', idx: this.meIdx }; this.setPossession('us'); this.holdTimer = 1.4; this.updateBallPos(); return; }
+      if (r.speed > 0 && r.t < 1.8) return;
+      this.ball.roll = null; // you let it go
+      const passed = ((this.ball.x - this.me.x) * r.ux + (this.ball.y - this.me.y) * r.uy) > 0;
+      this.app.coach('The pass came to you — go and get it! 🏃', 'bad'); this.msgCool = 4;
+      this.teach('drill-roll', passed ? 'The ball rolled past you 🏃' : 'You let the pass go 🏃', `That pass was played to YOU. It came within ${Math.max(1, Math.round(r.minD))} m of you and you did not go to meet it, so the other team picked it up. When a pass comes, attack the ball.`, 'Move toward passes meant for you.', { arrows: [{ from: { x: r.from.x, y: r.from.y }, to: { x: this.ball.x, y: this.ball.y } }] });
+      let best = 0, bd = 1e9; this.them.forEach((p, i) => { const d2 = L.dist(p, this.ball); if (d2 < bd) { bd = d2; best = i; } });
+      this.holder = { team: 'them', idx: best }; this.setPossession('them'); this.holdTimer = rnd(1, 2); this.updateBallPos();
+    }
     landBall() {
       const f = this.ball.flight, mates = f.receiver.team === 'us' ? this.us : this.them, r = mates[f.receiver.idx];
       this.ball.flight = null;
       if (f.receiver.team === 'us' && f.receiver.idx === this.meIdx) {
-        const closed = f.startD !== undefined && L.dist(this.me, f.to) < f.startD - 1.5; // you ran toward it
-        if (L.dist(this.me, f.to) > (closed ? 5 : 3)) { // you let it roll past you
-          this.app.coach('The pass came to you — go and get it! 🏃', 'bad'); this.msgCool = 4; this.teach('drill-roll', 'The ball rolled past you 🏃', 'That pass was played to YOU, but you did not move to meet it, so the other team picked it up. When a pass comes, attack the ball.', 'Move toward passes meant for you.', { arrows: [{ from: { x: f.from.x, y: f.from.y }, to: { x: f.to.x, y: f.to.y } }] });
-          let best = 0, bd = 1e9; this.them.forEach((p, i) => { const d = L.dist(p, f.to); if (d < bd) { bd = d; best = i; } });
-          this.holder = { team: 'them', idx: best }; this.setPossession('them'); this.holdTimer = rnd(1, 2); return;
+        if (L.dist(this.me, f.to) > 3.2) { // not there yet: the ball keeps rolling for a moment, so you can still go and get it
+          const dx = f.to.x - f.from.x, dy = f.to.y - f.from.y, n = Math.hypot(dx, dy) || 1;
+          this.ball.z = 0; this.ball.roll = { ux: dx / n, uy: dy / n, speed: 7, t: 0, from: f.from, minD: L.dist(this.me, this.ball) }; this.holder = null; return;
         }
-        this.received++; this.points += 50; this.app.sfx.receive(); this.app.sfx.perfect();
-        this.app.fx.text(this.me.x, this.me.y - 3, '+50 Great spot!', '#b6ff3b', 2); this.app.fx.burst(this.me.x, this.me.y, ['#b6ff3b', '#fff'], 18, 8);
-        this.app.coach('Perfect position — the ball found YOU! ⚽✨', 'good'); this.msgCool = 3;
+        this.receiveMe(50, '+50 Great spot!', 'Perfect position — the ball found YOU! ⚽✨');
       } else { this.app.sfx.receive(); this.app.fx.dust(r.x, r.y); }
       this.holder = f.receiver; this.setPossession(f.receiver.team);
       this.holdTimer = (this.holder.team === 'us' && this.holder.idx === this.meIdx) ? 1.4 : rnd(1.0, 2.3);
@@ -142,6 +158,8 @@
         const f = this.ball.flight; f.t += dt; const k = Math.min(1, f.t / f.dur);
         this.ball.x = f.from.x + (f.to.x - f.from.x) * k; this.ball.y = f.from.y + (f.to.y - f.from.y) * k; this.ball.z = Math.sin(k * Math.PI) * f.loft; this.ball.spin += dt * 14;
         if (k >= 1) this.landBall();
+      } else if (this.ball.roll) {
+        this.updateRoll(dt);
       } else if (this.holder) {
         this.holdTimer -= dt; if (this.holdTimer <= 0) this.kickPass();
       }
