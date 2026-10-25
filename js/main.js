@@ -11,6 +11,9 @@
   const ROLES = [['GK', 'Keeper 🧤'], ['LB', 'Left Back'], ['LCB', 'Center Back (L)'], ['RCB', 'Center Back (R)'], ['RB', 'Right Back'], ['LCM', 'Left Mid'], ['CM', 'Center Mid'], ['RCM', 'Right Mid'], ['LW', 'Left Wing'], ['ST', 'Striker ⚽'], ['RW', 'Right Wing']];
   const settings = { role: 'CM', difficulty: 'rookie', team: 0, name: '', avatar: null, camera: 'full' };
   try { Object.assign(settings, JSON.parse(localStorage.getItem('pp-settings') || '{}')); } catch (e) {}
+  // Game speed: slow motion for small screens and young players, so there is time to move and read the coach. Online matches run at full speed.
+  const SPEEDS = { slow: 0.55, normal: 0.8, full: 1 };
+  if (!SPEEDS[settings.speed]) settings.speed = (window.PhoneView && PhoneView.active()) ? 'slow' : 'full';
   const applyAvatar = () => {
     window.__myAvatar = settings.avatar || Avatars.defaultAvatar('kid', 'm'); window.__avatarSet = window.__myAvatar.set;
     const teen = window.__avatarSet === 'teen'; document.documentElement.dataset.theme = teen ? 'teen' : 'kid';
@@ -51,6 +54,7 @@
 
   const app = {
     pitch: null, fx: new FX(), sfx: window.SFX, mode: null, modeKey: null, running: false, paused: false, net: null, settings,
+    timeScale() { return app.modeKey === 'online' ? 1 : (SPEEDS[settings.speed] || 1); },
     toggleCamera() { settings.camera = settings.camera === 'follow' ? 'full' : 'follow'; settings.cameraChosen = true; save(); renderCamera(); this.toast(settings.camera === 'follow' ? 'Camera: follow the ball 🔍' : 'Camera: full field'); },
     setScore(n) { if (el.score.textContent !== String(n)) el.score.textContent = n; },
     setTimer(s) { const v = Math.max(0, Math.ceil(s)); el.timerLbl.textContent = 'Time'; el.timer.textContent = `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; el.timerChip.classList.toggle('hurry', v <= 10 && v > 0); },
@@ -65,7 +69,7 @@
     verdict(word, why, kind) { el.verdict.className = 'show ' + kind; el.verdict.querySelector('.word').textContent = word; el.verdict.querySelector('.why').textContent = why; },
     hideVerdict() { el.verdict.className = ''; },
     showPass(b) { el.passBtn.classList.toggle('show', !!b && !Touch.enabled); },
-    toast(t, ms) { el.toast.textContent = t; el.toast.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => el.toast.classList.remove('show'), ms || 1600); },
+    toast(t, ms) { el.toast.textContent = t; el.toast.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => el.toast.classList.remove('show'), ms || (window.PhoneView && PhoneView.active() ? 3000 : 1600)); }, // phones get longer to read
     finish(r) { this.running = false; Touch.enable(false); this.lastReport = r.report || null; showResults(r); updateRotate(); },
     choices(list, cb, prompt) { const bar = $('#choiceBar'); bar.innerHTML = `${prompt ? `<div class="prompt">${prompt}</div>` : ''}<div class="btns">${list.map((c, i) => `<button class="btn big ${i % 2 ? 'pink' : 'cyan'}" data-i="${i}">${c.label}</button>`).join('')}</div>`; bar.classList.add('show'); bar.querySelectorAll('button').forEach(b => b.onclick = () => { this.sfx.pop(); cb(list[+b.dataset.i].key); }); },
     hideChoices() { const bar = $('#choiceBar'); bar.classList.remove('show'); bar.innerHTML = ''; },
@@ -162,12 +166,14 @@
         <p style="margin-top:14px"><b style="color:var(--text)">Your position</b></p>${rolePicker('rolePick', settings.role)}` : ''}
       ${t.pick === 'spacing' ? `<p style="margin-top:14px"><b style="color:var(--text)">Pick your position</b></p>${rolePicker('rolePick', settings.role === 'GK' ? 'CM' : settings.role, drillRoles)}
         <p style="margin-top:14px"><b style="color:var(--text)">Helper ring</b></p><div class="seg" id="diffPick">${[['rookie', 'Rookie: always on'], ['pro', 'Pro: fades'], ['legend', 'Legend: hidden']].map(d => `<button data-d="${d[0]}" class="${settings.difficulty === d[0] ? 'on' : ''}">${d[1]}</button>`).join('')}</div>` : ''}
+      <p style="margin-top:14px"><b style="color:var(--text)">Game speed</b></p><div class="seg" id="speedPick">${[['slow', '🐢 Slow'], ['normal', '🙂 Normal'], ['full', '⚡ Full']].map(s => `<button data-s="${s[0]}" class="${settings.speed === s[0] ? 'on' : ''}">${s[1]}</button>`).join('')}</div>
       <div class="actions"><button class="btn ghost" id="tutBack">Back</button><button class="btn big ${t.color}" id="tutPlay">PLAY ▶</button></div>
     </div>`;
     el.tutorial.classList.add('active'); show(el.game);
     if (t.diagrams) drawOffsideDiagrams();
     el.tutorial.querySelectorAll('#rolePick button').forEach(b => b.onclick = () => { settings.role = b.dataset.role; save(); el.tutorial.querySelectorAll('#rolePick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     el.tutorial.querySelectorAll('#diffPick button').forEach(b => b.onclick = () => { settings.difficulty = b.dataset.d; save(); el.tutorial.querySelectorAll('#diffPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
+    el.tutorial.querySelectorAll('#speedPick button').forEach(b => b.onclick = () => { settings.speed = b.dataset.s; save(); el.tutorial.querySelectorAll('#speedPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     el.tutorial.querySelectorAll('#teamPick button').forEach(b => b.onclick = () => { settings.team = +b.dataset.t; save(); el.tutorial.querySelectorAll('#teamPick button').forEach(x => x.classList.toggle('on', x === b)); app.sfx.pop(); });
     $('#tutBack').onclick = $('#tutX').onclick = () => { el.tutorial.classList.remove('active'); show(el.menu); };
     $('#tutPlay').onclick = () => { if (PhoneView.active()) PhoneView.enterFullscreen(); el.tutorial.classList.remove('active'); startGame(key); homeScreenTip(); }; // the Play tap is the gesture that lets a phone go full screen
@@ -249,7 +255,7 @@
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     avatarTopFrame(dt);
     if (!app.mode || !el.game.classList.contains('active')) return;
-    if (app.running && !app.paused) { app.mode.update(dt); app.fx.update(dt); }
+    if (app.running && !app.paused) { app.mode.update(dt * app.timeScale()); app.fx.update(dt); }
     const c = app.pitch.ctx; c.save();
     if (app.fx.shake > 0) c.translate((Math.random() - .5) * app.fx.shake * 12, (Math.random() - .5) * app.fx.shake * 12);
     app.mode.draw(); c.restore();

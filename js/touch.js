@@ -6,7 +6,7 @@
   'use strict';
   const Touch = {
     vec: { x: 0, y: 0 }, enabled: false, actions: {},
-    R: 56, dead: 6, rest: false, active: null, // R = thumb travel for full speed (px); rest = show a resting joystick
+    R: 56, dead: 6, rest: false, fixed: false, active: null, // R = thumb travel for full speed (px); rest = show a resting joystick; fixed = the stick never moves: any press on the left half steers relative to it
     isTouchDevice() {
       if (/touch=1/.test(location.search)) return true; if (/touch=0/.test(location.search)) return false;
       const ua = navigator.userAgent || '';
@@ -32,15 +32,16 @@
       const onDown = e => {
         if (!this.enabled || e.target.closest('.tbtn')) return; const r = stage.getBoundingClientRect(); if (e.clientX - r.left > r.width * 0.55) return;
         this.active = e.pointerId; this.ox = e.clientX; this.oy = e.clientY;
-        if (this.rest) { const p = this.restPos(); if (Math.hypot(e.clientX - r.left - p.x, e.clientY - r.top - p.y) < 64) { this.ox = r.left + p.x; this.oy = r.top + p.y; } } // a tap near the resting stick uses its center
+        if (this.rest) { const p = this.restPos(); if (this.fixed || Math.hypot(e.clientX - r.left - p.x, e.clientY - r.top - p.y) < 64) { this.ox = r.left + p.x; this.oy = r.top + p.y; } } // fixed stick: every press steers from its center; floating: only a press near it does
         this.base.classList.remove('idle'); this.knob.classList.remove('idle'); this.base.style.display = this.knob.style.display = 'block';
         this.place(this.base, this.ox - r.left, this.oy - r.top); move(e); e.preventDefault();
       };
       const move = e => {
         if (e.pointerId !== this.active) return; const r = stage.getBoundingClientRect(), R = this.R;
         let dx = e.clientX - this.ox, dy = e.clientY - this.oy, d = Math.hypot(dx, dy);
-        if (d > R) { // overshoot: the base follows the thumb, so the stick is always right under it
-          const k = (d - R) / d; this.ox += dx * k; this.oy += dy * k; dx *= R / d; dy *= R / d; d = R; this.place(this.base, this.ox - r.left, this.oy - r.top);
+        if (d > R) {
+          if (this.fixed) { dx *= R / d; dy *= R / d; d = R; } // fixed stick: full speed in that direction, the base stays put
+          else { const k = (d - R) / d; this.ox += dx * k; this.oy += dy * k; dx *= R / d; dy *= R / d; d = R; this.place(this.base, this.ox - r.left, this.oy - r.top); } // floating: the base follows the thumb
         }
         const mag = d <= this.dead ? 0 : Math.min(1, (d - this.dead) / (R - this.dead));
         this.vec = d > 0 ? { x: dx / d * mag, y: dy / d * mag } : { x: 0, y: 0 };

@@ -31,6 +31,14 @@ async function startMatch(page, mode, settle = 3000) {
   if (await page.$eval('#avatar', e => e.classList.contains('active'))) { await page.click('#avSave'); await page.waitForTimeout(700); }
   await page.click('#tutPlay'); await page.waitForTimeout(settle);
 }
+async function stepsIn2s(page) { // engine steps over 2s of real time, pressing "Got it" on any coaching popup so the match is never paused mid-measure
+  const dismiss = async () => { const m = await page.$('#explainModal:visible'); if (m) { const b = await m.$('button'); if (b) await b.click().catch(() => {}); return true; } return false; };
+  await dismiss(); await page.waitForTimeout(150);
+  const a = await page.evaluate(() => window.__app.mode.sim.tick); let paused = 0;
+  for (let i = 0; i < 20; i++) { await page.waitForTimeout(100); if (await dismiss()) paused++; }
+  const b = await page.evaluate(() => window.__app.mode.sim.tick);
+  return { speed: await page.evaluate(() => window.__app.settings.speed), scale: await page.evaluate(() => window.__app.timeScale()), steps: b - a, popups: paused };
+}
 async function backToMenu(page) {
   const m = await page.$('#explainModal:visible'); if (m) { const b = await m.$('button'); if (b) await b.click().catch(() => {}); }
   await page.keyboard.press('KeyP'); await page.waitForTimeout(300); const q = await page.$('#quitBtn'); if (q) await q.click({ force: true }).catch(() => {}); await page.waitForTimeout(500);
@@ -68,6 +76,9 @@ async function backToMenu(page) {
   } else console.log('  - this browser build cannot go full screen; button checks skipped');
 
   await startMatch(page, 'match');
+  // game speed: slow motion by default on a phone (engine steps per 2s: 120 at full speed, about 66 at Slow)
+  const sp = await stepsIn2s(page); log('phone speed:', JSON.stringify(sp));
+  check(sp.speed === 'slow' && sp.scale === 0.55 && sp.steps > 50 && sp.steps < 85, `phone speed: Slow by default, ${sp.steps} engine steps in 2s (120 would be full speed)`);
   let s = await page.evaluate(state); log('phone match:', JSON.stringify(s));
   check(s.canvas[0] >= s.stage[0] - 2 && s.canvas[1] >= s.stage[1] - 2, `phone match: canvas fills the stage (${s.canvas.join('x')} of ${s.stage.join('x')})`);
   check(s.scale >= 7.5 && s.scale <= 13.5, `phone match: zoomed to ${s.scale} px per meter (want 7.5–13)`);
@@ -76,17 +87,17 @@ async function backToMenu(page) {
   await page.screenshot({ path: path.join(OUT, 'pocket-match.png') });
   // joystick: resting stick visible, short travel, base follows an overshoot
   const joy = await page.evaluate(() => { const b = document.querySelector('.joy-base'); return { R: Touch.R, rest: Touch.rest, idle: b.classList.contains('idle') && b.style.display === 'block', left: parseFloat(b.style.left), top: parseFloat(b.style.top) }; });
-  check(joy.R === 30 && joy.rest && joy.idle, `phone joystick: resting stick shown at (${joy.left}, ${joy.top}) with 30px travel`);
+  check(joy.R === 24 && joy.rest && joy.idle, `phone joystick: fixed thumb-pad shown at (${joy.left}, ${joy.top}) with 24px travel`);
   const st = await page.$eval('#stage', e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top }; });
-  await page.mouse.move(st.x + joy.left, st.y + joy.top); await page.mouse.down(); await page.mouse.move(st.x + joy.left + 18, st.y + joy.top, { steps: 3 }); await page.waitForTimeout(80);
-  const v1 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), y: +Touch.vec.y.toFixed(2) }));
-  check(v1.x >= 0.5 && v1.x < 0.7 && Math.abs(v1.y) < 0.05, `phone joystick: an 18px thumb slide already gives ${v1.x} of full speed (was 0.32)`);
-  await page.mouse.move(st.x + joy.left + 90, st.y + joy.top, { steps: 4 }); await page.waitForTimeout(80);
-  const v2 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), base: parseFloat(document.querySelector('.joy-base').style.left) }));
-  check(v2.x === 1 && v2.base > joy.left + 40, `phone joystick: overshoot gives full speed and the base followed the thumb (base now at ${v2.base})`);
+  await page.mouse.move(st.x + joy.left + 40, st.y + joy.top); await page.mouse.down(); await page.waitForTimeout(80); // press to the RIGHT of the pad, no slide at all
+  const v1 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), y: +Touch.vec.y.toFixed(2), base: parseFloat(document.querySelector('.joy-base').style.left) }));
+  check(v1.x === 1 && Math.abs(v1.y) < 0.05 && Math.abs(v1.base - joy.left) < 1, `phone joystick: a press 40px right of the pad = full speed right, pad did not move (${JSON.stringify(v1)})`);
+  await page.mouse.move(st.x + joy.left + 10, st.y + joy.top - 60, { steps: 3 }); await page.waitForTimeout(80);
+  const v2 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), y: +Touch.vec.y.toFixed(2) }));
+  check(v2.y < -0.9 && v2.x > 0 && v2.x < 0.3, `phone joystick: sliding above the pad steers up (${JSON.stringify(v2)})`);
   await page.mouse.up(); await page.waitForTimeout(80);
   const v3 = await page.evaluate(() => { const b = document.querySelector('.joy-base'); return { x: Touch.vec.x, idle: b.classList.contains('idle'), left: parseFloat(b.style.left) }; });
-  check(v3.x === 0 && v3.idle && Math.abs(v3.left - joy.left) < 1, 'phone joystick: letting go stops the player and the stick returns to rest');
+  check(v3.x === 0 && v3.idle && Math.abs(v3.left - joy.left) < 1, 'phone joystick: letting go stops the player and the pad is still in place');
   await page.waitForTimeout(3000); const s2 = await page.evaluate(state); check(s2.cam && s2.scale >= 7.5, `phone match: still framing the action 3s later (${s2.scale} px/m)`);
   await page.screenshot({ path: path.join(OUT, 'pocket-match-2.png') });
   // the camera button still gives the whole field, now filling the width
@@ -115,6 +126,8 @@ async function backToMenu(page) {
   check(!s.phone, 'desktop: Pocket view stays off');
   check(s.cam === null && s.canvas[0] < s.stage[0] - 20, `desktop: full-field camera, field keeps its shape (${s.canvas.join('x')} in ${s.stage.join('x')})`);
   check(await dpage.$eval('#appVersion', e => /^v\d+\.\d+\.\d+$/.test(e.textContent)), 'desktop: the menu shows the build version');
+  const dsp = await stepsIn2s(dpage); log('desktop speed:', JSON.stringify(dsp));
+  check(dsp.speed === 'full' && dsp.steps > 100 && dsp.steps < 135, `desktop speed: Full by default, ${dsp.steps} engine steps in 2s`);
   await backToMenu(dpage);
   // offside trainer: the back line is ragged (never a perfect straight line) and, as a defender, you are one player in it
   const lineInfo = async () => dpage.evaluate(() => { const m = window.__app.mode; const xs = m.defs.map(d => +d.x.toFixed(2)); return { xs, spread: +(Math.max(...xs) - Math.min(...xs)).toFixed(2), meIdx: m.meIdx, meIsDef: m.me === m.defs[m.meIdx], lineX: +m.rulesNow().lineX.toFixed(2) }; });
