@@ -74,6 +74,19 @@ async function backToMenu(page) {
   check(s.cam && s.cam.cacheZoom > 0 && !s.cam.auto, 'phone match: action camera is driving the view');
   check(s.scale > s.base * 1.5, `phone match: players are ${(s.scale / s.base).toFixed(1)}x bigger than the full-field view`);
   await page.screenshot({ path: path.join(OUT, 'pocket-match.png') });
+  // joystick: resting stick visible, short travel, base follows an overshoot
+  const joy = await page.evaluate(() => { const b = document.querySelector('.joy-base'); return { R: Touch.R, rest: Touch.rest, idle: b.classList.contains('idle') && b.style.display === 'block', left: parseFloat(b.style.left), top: parseFloat(b.style.top) }; });
+  check(joy.R === 30 && joy.rest && joy.idle, `phone joystick: resting stick shown at (${joy.left}, ${joy.top}) with 30px travel`);
+  const st = await page.$eval('#stage', e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top }; });
+  await page.mouse.move(st.x + joy.left, st.y + joy.top); await page.mouse.down(); await page.mouse.move(st.x + joy.left + 18, st.y + joy.top, { steps: 3 }); await page.waitForTimeout(80);
+  const v1 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), y: +Touch.vec.y.toFixed(2) }));
+  check(v1.x >= 0.5 && v1.x < 0.7 && Math.abs(v1.y) < 0.05, `phone joystick: an 18px thumb slide already gives ${v1.x} of full speed (was 0.32)`);
+  await page.mouse.move(st.x + joy.left + 90, st.y + joy.top, { steps: 4 }); await page.waitForTimeout(80);
+  const v2 = await page.evaluate(() => ({ x: +Touch.vec.x.toFixed(2), base: parseFloat(document.querySelector('.joy-base').style.left) }));
+  check(v2.x === 1 && v2.base > joy.left + 40, `phone joystick: overshoot gives full speed and the base followed the thumb (base now at ${v2.base})`);
+  await page.mouse.up(); await page.waitForTimeout(80);
+  const v3 = await page.evaluate(() => { const b = document.querySelector('.joy-base'); return { x: Touch.vec.x, idle: b.classList.contains('idle'), left: parseFloat(b.style.left) }; });
+  check(v3.x === 0 && v3.idle && Math.abs(v3.left - joy.left) < 1, 'phone joystick: letting go stops the player and the stick returns to rest');
   await page.waitForTimeout(3000); const s2 = await page.evaluate(state); check(s2.cam && s2.scale >= 7.5, `phone match: still framing the action 3s later (${s2.scale} px/m)`);
   await page.screenshot({ path: path.join(OUT, 'pocket-match-2.png') });
   // the camera button still gives the whole field, now filling the width

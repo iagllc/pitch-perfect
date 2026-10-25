@@ -476,3 +476,8 @@ html[data-phone] .hud.bottom { padding-left: calc(6px + env(safe-area-inset-left
 html[data-phone] .tbtn.pass { right: calc(72px + env(safe-area-inset-right)); } html[data-phone] .tbtn.shoot { right: calc(8px + env(safe-area-inset-right)); }
 html[data-phone] #choiceBar { right: calc(6px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom)); }
 html[data-phone] .rule-panel { right: calc(4px + env(safe-area-inset-right)); }
+/* Phone joystick: a resting stick at thumb height (faint until touched), smaller base, short travel */
+:root { --sal: env(safe-area-inset-left, 0px); }
+.joy-base, .joy-knob { transition: opacity .18s; }
+#touchLayer.rest .joy-base.idle { opacity: .32; } #touchLayer.rest .joy-knob.idle { opacity: .45; }
+html[data-phone] .joy-base { width: 84px; height: 84px; border-width: 2px; } html[data-phone] .joy-knob { width: 38px; height: 38px; }
