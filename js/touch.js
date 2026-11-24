@@ -28,7 +28,7 @@
     },
     init(stage) {
       this.stage = stage; this.layer = document.getElementById('touchLayer'); this.base = this.layer.querySelector('.joy-base'); this.knob = this.layer.querySelector('.joy-knob');
-      this.btnPass = document.getElementById('tPass'); this.btnShoot = document.getElementById('tShoot');
+      this.btnPass = document.getElementById('tPass'); this.btnShoot = document.getElementById('tShoot'); this.btnOpen = document.getElementById('tOpen');
       const onDown = e => {
         if (!this.enabled || e.target.closest('.tbtn')) return; const r = stage.getBoundingClientRect(); if (e.clientX - r.left > r.width * 0.55) return;
         this.active = e.pointerId; this.ox = e.clientX; this.oy = e.clientY;
@@ -50,12 +50,12 @@
       const onUp = e => { if (e.pointerId !== this.active) return; this.active = null; this.vec = { x: 0, y: 0 }; this.base.style.display = this.knob.style.display = 'none'; this.showRest(); };
       stage.addEventListener('pointerdown', onDown, { capture: true }); window.addEventListener('pointermove', move); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp);
       const bind = (btn, name) => { btn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); btn.classList.add('down'); this.actions[name] && this.actions[name](); btn.blur(); }); btn.addEventListener('pointerup', () => btn.classList.remove('down')); btn.addEventListener('pointercancel', () => btn.classList.remove('down')); };
-      bind(this.btnPass, 'pass'); bind(this.btnShoot, 'shoot');
+      bind(this.btnPass, 'pass'); bind(this.btnShoot, 'shoot'); bind(this.btnOpen, 'open');
     },
     enable(on, buttons = [], opts = {}) {
       this.enabled = on && this.isTouchDevice(); const showButtons = on && (this.enabled || opts.buttonsAlways);
       this.layer.classList.toggle('on', showButtons); this.layer.classList.toggle('joy', this.enabled);
-      this.btnPass.style.display = showButtons && buttons.includes('pass') ? '' : 'none'; this.btnShoot.style.display = showButtons && buttons.includes('shoot') ? '' : 'none';
+      this.btnPass.style.display = showButtons && buttons.includes('pass') ? '' : 'none'; this.btnShoot.style.display = showButtons && buttons.includes('shoot') ? '' : 'none'; this.btnOpen.style.display = showButtons && buttons.includes('open') ? '' : 'none';
       if (!on) { this.vec = { x: 0, y: 0 }; this.active = null; }
       this.showRest();
     },

@@ -85,6 +85,11 @@ async function backToMenu(page) {
   check(s.cam && s.cam.cacheZoom > 0 && !s.cam.auto, 'phone match: action camera is driving the view');
   check(s.scale > s.base * 1.5, `phone match: players are ${(s.scale / s.base).toFixed(1)}x bigger than the full-field view`);
   await page.screenshot({ path: path.join(OUT, 'pocket-match.png') });
+  // OPEN! button: visible on touch, and tapping it makes the player yell (the coach reacts)
+  check(await page.$eval('#tOpen', b => b.style.display !== 'none' && b.offsetParent !== null), 'phone: the OPEN! button is shown next to PASS and SHOOT');
+  await page.tap('#tOpen'); await page.waitForTimeout(400);
+  const yell = await page.$eval('#coachText', e => e.innerText);
+  check(/call|yell|OPEN|Here it comes/i.test(yell), `phone: tapping OPEN! gets a reaction from the coach ("${yell.slice(0, 60)}")`);
   // joystick: resting stick visible, short travel, base follows an overshoot
   const joy = await page.evaluate(() => { const b = document.querySelector('.joy-base'); return { R: Touch.R, rest: Touch.rest, idle: b.classList.contains('idle') && b.style.display === 'block', left: parseFloat(b.style.left), top: parseFloat(b.style.top) }; });
   check(joy.R === 24 && joy.rest && joy.idle, `phone joystick: fixed thumb-pad shown at (${joy.left}, ${joy.top}) with 24px travel`);

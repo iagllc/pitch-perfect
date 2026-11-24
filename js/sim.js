@@ -68,9 +68,10 @@
     removeHuman(id) { const p = this.players.find(q => q.human === id); if (p) { p.human = null; p.hname = null; p.input = null; p.avatar = randomAvatarData(this.avatarSet, this.rng); } }
     setInput(id, inp) {
       const p = this.players.find(q => q.human === id); if (!p) return; const old = p.input || {};
-      p.input = { mx: clamp(+inp.mx || 0, -1, 1), my: clamp(+inp.my || 0, -1, 1), pass: !!inp.pass || old.pass, shoot: !!inp.shoot || old.shoot, passUntil: old.passUntil || 0, shootUntil: old.shootUntil || 0 };
+      p.input = { mx: clamp(+inp.mx || 0, -1, 1), my: clamp(+inp.my || 0, -1, 1), pass: !!inp.pass || old.pass, shoot: !!inp.shoot || old.shoot, passUntil: old.passUntil || 0, shootUntil: old.shootUntil || 0, openUntil: old.openUntil || 0, openCall: old.openCall || false };
       if (inp.pass) p.input.passUntil = this.tick + 45;   // a press is remembered for 0.75 s
       if (inp.shoot) p.input.shootUntil = this.tick + 45;
+      if (inp.open) { p.input.openUntil = this.tick + 180; p.input.openCall = true; } // "OPEN!": teammates look for you for 3 s
     }
     wants(p, what) { const i = p.input; return !!i && (i[what] || (i[what + 'Until'] || 0) > this.tick); }
     consume(p) { if (p.input) { p.input.pass = p.input.shoot = false; p.input.passUntil = p.input.shootUntil = 0; } }
@@ -97,6 +98,10 @@
       this.events = []; this.tick++;
       if (this.phase === 'fulltime') return this.events;
       for (const p of this.players) { p.kickCool = Math.max(0, p.kickCool - dt); }
+      { // "OPEN!" calls are announced before anyone moves or passes, so the answer reflects the moment of the shout
+        const h = this.ball.holder >= 0 ? this.players[this.ball.holder] : null;
+        for (const p of this.players) if (p.human && p.input && p.input.openCall) { p.input.openCall = false; const ours = !!(h && h.team === p.team && h !== p); this.emit({ type: 'opencall', player: p.i, hasBall: ours, open: ours && this.laneOpen(h, p, p.team) >= 2.5 }); }
+      }
       if (this.phase !== 'play') {
         this.phaseT -= dt;
         if (this.phaseT <= 0) {
@@ -192,7 +197,7 @@
     gkDecide(p, holder, toward) {
       const b = this.ball, g = this.ownGoal(p.team), d = this.dir(p.team);
       if (this.passive && p.team === 1) return toward({ x: g.x + d * 1.5, y: F.h / 2 }, 2);
-      if (holder === p) { if (p.holdTime > (p.mustKick ? 0.25 : 1.0)) this.aiPass(p, true); return { x: 0, y: 0 }; }
+      if (holder === p) { if (p.holdTime > 0.5 && this.passToCaller(p)) return { x: 0, y: 0 }; if (p.holdTime > (p.mustKick ? 0.25 : 1.0)) this.aiPass(p, true); return { x: 0, y: 0 }; }
       // shot coming? move to where it will cross
       if (b.inFlight && b.inFlight.kind === 'shot' && b.inFlight.team !== p.team && Math.sign(b.vx) === -d && Math.hypot(b.vx, b.vy) > 8 && (b.inFlight.t || 0) > 0.33) { // keepers need a moment to react
         const tcross = (g.x - b.x) / b.vx; if (tcross > 0 && tcross < 2.5) { const yAt = b.y + b.vy * tcross; return toward({ x: g.x + d * 1.2, y: clamp(yAt, F.h / 2 - 5, F.h / 2 + 5) }, 6.5); }
@@ -209,6 +214,7 @@
       const shotLane = this.laneOpen(p, g, p.team, true);
       const shotOK = goalD < 30 && Math.abs(p.y - F.h / 2) < 17 && (shotLane > 0.9 || goalD < 13);
       if (shotOK && (goalD < 20 || (pressure < 3.5 && goalD < 26) || this.rng() < 0.04)) { this.kickShot(p.i); return { x: 0, y: 0 }; }
+      if (p.holdTime > 0.3 && this.passToCaller(p)) return { x: 0, y: 0 };
       const patience = pressure < 2.5 ? 0.7 : 1.4 + this.rng() * 1.2;
       if (p.holdTime > patience) { this.aiPass(p); return { x: d, y: 0 }; }
       // dribble toward goal, away from the nearest defender
@@ -224,24 +230,37 @@
       for (const q of this.teamPlayers(1 - team)) { if (skipGK && q.role === 'GK') continue; const t = clamp(((q.x - from.x) * dx + (q.y - from.y) * dy) / len2, 0.05, 0.95); const px = from.x + dx * t, py = from.y + dy * t; best = Math.min(best, Math.hypot(q.x - px, q.y - py)); }
       return best;
     }
-    bestReceiver(p, dirVec) {
+    bestReceiver(p, dirVec, opts = {}) { // opts.cone widens the facing cone; opts.requireOpen only returns a teammate with a clear lane and nobody on him
       const d = this.dir(p.team), line = this.offsideLine(p.team), opp = this.teamPlayers(1 - p.team);
       let best = null, bs = -1e9;
       for (const q of this.teamPlayers(p.team)) {
         if (q === p) continue; const dd = dist(p, q); if (dd < 4 || dd > 45) continue;
-        if (dirVec) { const ang = Math.acos(clamp(((q.x - p.x) * dirVec.x + (q.y - p.y) * dirVec.y) / dd, -1, 1)); if (ang > 0.8) continue; }
+        if (dirVec) { const ang = Math.acos(clamp(((q.x - p.x) * dirVec.x + (q.y - p.y) * dirVec.y) / dd, -1, 1)); if (ang > (opts.cone || 0.8)) continue; }
         const off = L.judgeOffside({ attacker: q, ball: this.ball, opponents: opp, dir: d }).offside;
         const lane = this.laneOpen(p, q, p.team), mark = Math.min(...opp.map(o => dist(o, q)));
-        const gq = dist(q, this.goalOf(p.team)); let s = (q.x - p.x) * d * 0.08 - gq * 0.035 + (gq < 25 ? 1.8 : 0) + Math.min(lane, 8) * 0.35 + Math.min(mark, 8) * 0.15 - (q.role === 'GK' ? 4 : 0) - (off ? 6 : 0) + this.rng() * 0.6;
+        if (opts.requireOpen && !(lane >= 2.5 && mark >= 2.5 && !off)) continue;
+        const gq = dist(q, this.goalOf(p.team)); let s = (q.x - p.x) * d * 0.14 - gq * 0.045 + (gq < 25 ? 2.4 : 0) + Math.min(lane, 8) * 0.2 + Math.min(mark, 8) * 0.12 - (q.role === 'GK' ? 4 : 0) - (off ? 6 : 0) + this.rng() * 0.6;
+        const risky = gq < 25 ? 0.4 : 1; // near their goal a risky ball is worth it; elsewhere play the open man
+        if (lane < 1.5) s -= 8 * risky; else if (lane < 2.5) s -= 4 * risky; else if (lane < 4) s -= 1.5 * risky; // a defender in the lane is an interception waiting to happen
+        if (mark < 2) s -= 2.5 * risky; // a marked receiver loses it straight away
+        if (gq < 25 && mark >= 3) s += 1.6; // an unmarked teammate near goal is the pass we want
         if (q.human && dist(q, q.target) < L.GOOD_RADIUS) s += 1.2;
+        if (q.human && this.wants(q, 'open')) s += 3; // he is calling for it
         if (s > bs) { bs = s; best = q; }
       }
       return best;
     }
     humanPass(p) {
-      const inp = p.input, hasDir = Math.hypot(inp.mx, inp.my) > 0.3; const dv = hasDir ? { x: inp.mx / Math.hypot(inp.mx, inp.my), y: inp.my / Math.hypot(inp.mx, inp.my) } : null;
-      const r = this.bestReceiver(p, dv) || (dv ? null : this.bestReceiver(p, null));
+      const inp = p.input, n = Math.hypot(inp.mx, inp.my), hasDir = n > 0.3; const dv = hasDir ? { x: inp.mx / n, y: inp.my / n } : null;
+      // look for the OPEN teammate: the way you are facing first, then a wider cone, then anywhere; only if nobody is open, the best you have the way you face
+      const r = (dv && this.bestReceiver(p, dv, { requireOpen: true })) || (dv && this.bestReceiver(p, dv, { requireOpen: true, cone: 1.6 })) || this.bestReceiver(p, null, { requireOpen: true }) || (dv && this.bestReceiver(p, dv)) || this.bestReceiver(p, null);
       if (r) this.kickPass(p.i, r.i); else if (dv) this.kickLoose(p.i, dv, 16); else this.kickLoose(p.i, { x: this.dir(p.team), y: 0 }, 14);
+    }
+    passToCaller(p) { // a teammate yelled "OPEN!": play it to him now if the lane is clear and he is onside
+      const caller = this.teamPlayers(p.team).find(h => h.human && h !== p && this.wants(h, 'open')); if (!caller) return false;
+      const dd = dist(p, caller), off = L.judgeOffside({ attacker: caller, ball: this.ball, opponents: this.teamPlayers(1 - p.team), dir: this.dir(p.team) }).offside;
+      if (dd < 4 || dd > 50 || off || this.laneOpen(p, caller, p.team) < 2.5) return false;
+      caller.input.openUntil = 0; this.kickPass(p.i, caller.i); this.emit({ type: 'openpass', from: p.i, to: caller.i }); return true;
     }
     aiPass(p, isGK) {
       const r = this.bestReceiver(p, null);

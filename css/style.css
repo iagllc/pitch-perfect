@@ -491,3 +491,8 @@ html[data-phone] .joy-base { width: 84px; height: 84px; border-width: 2px; } htm
   html[data-theme] .me-actions:not(.has-fs) .camBtn { grid-column: 1 / -1; }
   html[data-theme] .me-actions .camBtn { width: 100%; height: auto; display: inline-flex; padding: 8px 8px !important; } html[data-theme] .me-row .me-info { text-align: left; justify-self: start; } html[data-theme] .me-actions .camBtn::before { content: '🎥 Camera'; font-size: 13px; }
 }
+
+/* OPEN! button: yell for the ball (left of PASS) */
+.tbtn.open { right: 236px; background: var(--gold); color: #06101f; font-size: 15px; }
+@media (max-width: 950px), (max-height: 520px) { html[data-theme] .tbtn.open { right: 150px; font-size: 11px; } }
+html[data-phone] .tbtn.open { right: calc(136px + env(safe-area-inset-right)); font-size: 10px; }

@@ -8,7 +8,7 @@
   class MatchClient {
     constructor(app) { this.app = app; }
     start(o) {
-      this.mode = o.mode; this.team = o.team; this.role = o.role; this.name = o.name || 'You'; this.keys = {}; this.pending = { pass: false, shoot: false }; this.trail = []; this.over = false;
+      this.mode = o.mode; this.team = o.team; this.role = o.role; this.name = o.name || 'You'; this.keys = {}; this.pending = { pass: false, shoot: false, open: false }; this.trail = []; this.over = false;
       this.buffer = []; this.bufT = 0; this.replay = null; this.goalT = 99; this.goalSide = 0; this.finalBanner = false; this.lastSec = -1; this.halfShown = false; this.events = [];
       this.app.pitch.fullView(); this.app.setPossession(null); this.app.setCombo(null); this.app.showScoreboard(true);
       Explain.reset(); Explain.onPause = () => { this.paused = true; }; Explain.onResume = () => { this.paused = false; };
@@ -25,7 +25,7 @@
         this.view = this.viewFromSim();
       }
       this.app.coach(guidedText(this), 'info');
-      Touch.enable(true, ['pass', 'shoot'], { buttonsAlways: true }); Touch.actions.pass = () => this.pending.pass = true; Touch.actions.shoot = () => this.pending.shoot = true;
+      Touch.enable(true, ['pass', 'shoot', 'open'], { buttonsAlways: true }); Touch.actions.pass = () => this.pending.pass = true; Touch.actions.shoot = () => this.pending.shoot = true; Touch.actions.open = () => this.pending.open = true;
       try { this.app.sfx.crowdStart(); } catch (e) {}
       function guidedText(m) { const T = Touch.isTouchDevice(); return m.mode === 'guide' ? 'Welcome! Let’s learn the basics in 60 seconds.' : `You are the ${TEAM_NAME[m.team]} ${roleName(m.role)}. ${T ? 'Drag on the left to run, tap PASS or SHOOT.' : 'Space = pass, X = shoot.'} Keep your shape and stay onside!`; }
     }
@@ -34,10 +34,12 @@
       this.keys[code] = down;
       if (down && (code === 'Space' || code === 'Enter')) this.pending.pass = true;
       if (down && (code === 'KeyX' || code === 'ShiftLeft' || code === 'ShiftRight' || code === 'KeyE')) this.pending.shoot = true;
+      if (down && (code === 'KeyC' || code === 'KeyO')) this.pending.open = true; // yell OPEN!
     }
     onPointer() {}
     requestPass() { this.pending.pass = true; }
     requestShoot() { this.pending.shoot = true; }
+    requestOpen() { this.pending.open = true; }
     inputVec() {
       let mx = 0, my = 0; const k = this.keys;
       if (k.ArrowLeft || k.KeyA) mx -= 1; if (k.ArrowRight || k.KeyD) mx += 1; if (k.ArrowUp || k.KeyW) my -= 1; if (k.ArrowDown || k.KeyS) my += 1;
@@ -57,15 +59,15 @@
     }
     update(dt) {
       this.app.pitch.t += dt; if (this.over) return;
-      const inp = this.inputVec(); const full = { ...inp, pass: this.pending.pass, shoot: this.pending.shoot };
+      const inp = this.inputVec(); const full = { ...inp, pass: this.pending.pass, shoot: this.pending.shoot, open: this.pending.open };
       if (this.mode !== 'net') {
         if (this.paused) return;
-        this.sim.setInput('me', full); this.pending = { pass: false, shoot: false };
+        this.sim.setInput('me', full); this.pending = { pass: false, shoot: false, open: false };
         this.acc += dt; let n = 0; while (this.acc >= 1 / 60 && n++ < 4) { this.acc -= 1 / 60; const evs = this.sim.step(1 / 60); evs.forEach(e => this.handleEvent(e)); if (this.over) break; }
         this.view = this.viewFromSim();
         if (this.guide) this.guide.update(dt);
       } else {
-        this.sendT -= dt; if (this.sendT <= 0 || full.pass || full.shoot) { this.net.send({ t: 'input', ...full }); this.pending = { pass: false, shoot: false }; this.sendT = 1 / 20; }
+        this.sendT -= dt; if (this.sendT <= 0 || full.pass || full.shoot || full.open) { this.net.send({ t: 'input', ...full }); this.pending = { pass: false, shoot: false, open: false }; this.sendT = 1 / 20; }
         this.view = this.viewFromNet();
       }
       if (!this.view) return;
@@ -109,6 +111,9 @@
           P.coach(mine ? `${TEAM_NAME[e.team]} scores! Watch the replay, then back to shape.` : 'They scored. Shake it off — squeeze in and win it back!', mine ? 'good' : 'bad'); break; }
         case 'shot': P.sfx.kick(); if (e.from === me) P.fx.burst(ball.x, ball.y, '#fff', 6, 6); break;
         case 'pass': P.sfx.kick(); break;
+        case 'opencall': { const q = (this.view && this.view.players[e.player]) || ball; P.fx.text(q.x, q.y - 3.6, 'OPEN! 🙋', '#ffd23f', 2.4); P.sfx.pop();
+          if (e.player === me) P.coach(!e.hasBall ? 'Yell OPEN! when YOUR team has the ball.' : e.open ? 'You called for it — your teammate is looking for you!' : 'You called, but a defender is in the lane. Move into SPACE and call again!', e.open ? 'good' : 'info'); break; }
+        case 'openpass': if (e.to === me) P.coach('Here it comes! Go and meet the ball.', 'good'); break;
         case 'receive': if (e.by === me) { P.sfx.receive(); P.fx.sparkle(ball.x, ball.y, '#b6ff3b'); } break;
         case 'save': P.sfx.pop(); P.fx.text(ball.x, ball.y - 3, e.parry ? 'PARRIED!' : 'SAVED!', '#ffd23f', 2.4); break;
         case 'tackle': P.sfx.thud(); P.fx.text(ball.x, ball.y - 3, e.from === me ? 'Tackled!' : (e.by === me ? 'Won it! 💪' : 'Tackle'), e.from === me ? '#ff8a8a' : '#fff', 2); break;
