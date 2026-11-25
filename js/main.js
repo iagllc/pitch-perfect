@@ -267,7 +267,7 @@
     const send = (type, e) => { if (app.mode && app.running && !app.paused && !Touch.enabled) app.mode.onPointer(type, app.pitch.eventToM(e)); };
     cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); app.sfx.unlock(); send('down', e); });
     cv.addEventListener('pointermove', e => send('move', e)); cv.addEventListener('pointerup', e => send('up', e)); cv.addEventListener('pointercancel', e => send('up', e));
-    const keyish = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'KeyX', 'KeyE', 'ShiftLeft', 'ShiftRight', 'KeyB', 'KeyC', 'KeyO', 'Digit1', 'Digit2', 'Digit3']);
+    const keyish = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'KeyX', 'KeyE', 'ShiftLeft', 'ShiftRight', 'KeyB', 'KeyV', 'KeyC', 'KeyO', 'Digit1', 'Digit2', 'Digit3']);
     window.addEventListener('keydown', e => {
       if (!el.game.classList.contains('active') || el.tutorial.classList.contains('active') || el.results.classList.contains('active')) return;
       if (Explain.current && Explain.current.blocking && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); Explain.hide(); return; }

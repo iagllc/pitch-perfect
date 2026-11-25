@@ -496,3 +496,8 @@ html[data-phone] .joy-base { width: 84px; height: 84px; border-width: 2px; } htm
 .tbtn.open { right: 236px; background: var(--gold); color: #06101f; font-size: 15px; }
 @media (max-width: 950px), (max-height: 520px) { html[data-theme] .tbtn.open { right: 150px; font-size: 11px; } }
 html[data-phone] .tbtn.open { right: calc(136px + env(safe-area-inset-right)); font-size: 10px; }
+
+/* MOVE button: skill move (above PASS) */
+.tbtn.move { right: 130px; bottom: 210px; background: #a78bfa; color: #06101f; font-size: 15px; }
+@media (max-width: 950px), (max-height: 520px) { html[data-theme] .tbtn.move { right: 80px; bottom: 134px; font-size: 11px; } }
+html[data-phone] .tbtn.move { right: calc(72px + env(safe-area-inset-right)); bottom: 118px; font-size: 10px; }

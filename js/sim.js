@@ -25,6 +25,7 @@
     offside: { title: 'Offside! 🚩', text: (d) => `When the ball was KICKED you were ${d} m past the second-last defender (the keeper counts as one). Wait on the line, then go the moment the ball is played.`, lesson: 'Time your run: start when the ball is kicked, not before.' },
     intercepted: { title: 'Pass cut out ✂️', text: (n) => `A defender was standing in the lane between you and ${n}. Look for a teammate with a CLEAR line, or pass to the side first.`, lesson: 'Pass down clear lanes, not through defenders.' },
     tackled: { title: 'Tackled! 💥', text: (t) => `You held the ball for ${t} s with a defender right on you. Pass EARLY when you feel pressure, or dribble away from the defender.`, lesson: 'Under pressure: pass early.' },
+    movelate: { title: 'Too late for the move 😖', text: (n) => `${n} was already on you when you tried your move, so he took the ball. Do it a step earlier, when he is 2 or 3 steps away and still running at you.`, lesson: 'Do your move when the defender is 2 steps away, not touching you.' },
     rolledpast: { title: 'That pass was for you 🏃', text: () => 'Your teammate played the ball to you, but you did not move to meet it. When the ball comes, GO and get it.', lesson: 'Move toward passes meant for you.' },
     position: { title: 'Goal against — gap in your zone 🕳️', text: (d) => `When the shot was taken you were ${d} m away from your spot. That gap is where the attack came through. Stay with the team shape.`, lesson: 'Keep your shape when defending.' },
     longshot: { title: 'Too far out 🎯', text: (d) => `You shot from ${d} m. From this far the keeper has plenty of time. Get inside the box, or pass to someone closer.`, lesson: 'Shoot from inside 25 m.' },
@@ -68,13 +69,14 @@
     removeHuman(id) { const p = this.players.find(q => q.human === id); if (p) { p.human = null; p.hname = null; p.input = null; p.avatar = randomAvatarData(this.avatarSet, this.rng); } }
     setInput(id, inp) {
       const p = this.players.find(q => q.human === id); if (!p) return; const old = p.input || {};
-      p.input = { mx: clamp(+inp.mx || 0, -1, 1), my: clamp(+inp.my || 0, -1, 1), pass: !!inp.pass || old.pass, shoot: !!inp.shoot || old.shoot, passUntil: old.passUntil || 0, shootUntil: old.shootUntil || 0, openUntil: old.openUntil || 0, openCall: old.openCall || false };
+      p.input = { mx: clamp(+inp.mx || 0, -1, 1), my: clamp(+inp.my || 0, -1, 1), pass: !!inp.pass || old.pass, shoot: !!inp.shoot || old.shoot, move: !!inp.move || old.move, passUntil: old.passUntil || 0, shootUntil: old.shootUntil || 0, moveUntil: old.moveUntil || 0, openUntil: old.openUntil || 0, openCall: old.openCall || false };
+      if (inp.move) p.input.moveUntil = this.tick + 45;
       if (inp.pass) p.input.passUntil = this.tick + 45;   // a press is remembered for 0.75 s
       if (inp.shoot) p.input.shootUntil = this.tick + 45;
       if (inp.open) { p.input.openUntil = this.tick + 180; p.input.openCall = true; } // "OPEN!": teammates look for you for 3 s
     }
     wants(p, what) { const i = p.input; return !!i && (i[what] || (i[what + 'Until'] || 0) > this.tick); }
-    consume(p) { if (p.input) { p.input.pass = p.input.shoot = false; p.input.passUntil = p.input.shootUntil = 0; } }
+    consume(p) { if (p.input) { p.input.pass = p.input.shoot = p.input.move = false; p.input.passUntil = p.input.shootUntil = p.input.moveUntil = 0; } }
     resetPositions(kickTeam, first) {
       for (const p of this.players) { p.x = p.home.x; p.y = p.home.y; p.vx = p.vy = 0; p.holdTime = 0; p.kickCool = 0; }
       const cm = this.players.find(p => p.team === kickTeam && p.role === 'CM'); cm.x = F.halfway - this.dir(kickTeam) * 0.8; cm.y = F.h / 2;
@@ -97,7 +99,7 @@
     step(dt) {
       this.events = []; this.tick++;
       if (this.phase === 'fulltime') return this.events;
-      for (const p of this.players) { p.kickCool = Math.max(0, p.kickCool - dt); }
+      for (const p of this.players) { p.kickCool = Math.max(0, p.kickCool - dt); p.moveT = Math.max(0, (p.moveT || 0) - dt); p.moveCool = Math.max(0, (p.moveCool || 0) - dt); p.beatenT = Math.max(0, (p.beatenT || 0) - dt); }
       { // "OPEN!" calls are announced before anyone moves or passes, so the answer reflects the moment of the shout
         const h = this.ball.holder >= 0 ? this.players[this.ball.holder] : null;
         for (const p of this.players) if (p.human && p.input && p.input.openCall) { p.input.openCall = false; const ours = !!(h && h.team === p.team && h !== p); this.emit({ type: 'opencall', player: p.i, hasBall: ours, open: ours && this.laneOpen(h, p, p.team) >= 2.5 }); }
@@ -154,10 +156,13 @@
       if (frozen && !p.human) { const t = p.target, ddx = t.x - p.x, ddy = t.y - p.y, dn = Math.hypot(ddx, ddy); if (dn > 0.3) { dx = ddx / dn; dy = ddy / dn; } }
       else if (p.human) {
         speed = p.role === 'GK' ? GK_SPEED : HUMAN_SPEED; dx = p.input.mx; dy = p.input.my;
-        if (holder === p) { if (this.wants(p, 'shoot')) { this.consume(p); this.kickShot(p.i); } else if (this.wants(p, 'pass')) { this.consume(p); this.humanPass(p); } }
+        if (holder === p && this.wants(p, 'move')) { p.input.move = false; p.input.moveUntil = 0; this.skillMove(p); }
+        if (p.moveT > 0) { dx = p.moveDir.x; dy = p.moveDir.y; speed *= p.moveSpeed; } // mid-move: the move drives the player
+        else if (holder === p) { if (this.wants(p, 'shoot')) { this.consume(p); this.kickShot(p.i); } else if (this.wants(p, 'pass')) { this.consume(p); this.humanPass(p); } }
       } else { const d = this.aiDecide(p, holder); dx = d.x; dy = d.y; speed = d.speed || (p.role === 'GK' ? GK_SPEED : AI_SPEED); }
       const n = Math.hypot(dx, dy); if (n > 1) { dx /= n; dy /= n; }
       if (holder === p) speed *= 0.88; // dribbling is a little slower
+      if (p.beatenT > 0) speed *= 0.25; // just beaten by a move: stumbling
       const tvx = dx * speed, tvy = dy * speed;
       p.vx += clamp(tvx - p.vx, -ACCEL * dt, ACCEL * dt); p.vy += clamp(tvy - p.vy, -ACCEL * dt, ACCEL * dt);
       p.x += p.vx * dt; p.y += p.vy * dt;
@@ -255,6 +260,25 @@
       // look for the OPEN teammate: the way you are facing first, then a wider cone, then anywhere; only if nobody is open, the best you have the way you face
       const r = (dv && this.bestReceiver(p, dv, { requireOpen: true })) || (dv && this.bestReceiver(p, dv, { requireOpen: true, cone: 1.6 })) || this.bestReceiver(p, null, { requireOpen: true }) || (dv && this.bestReceiver(p, dv)) || this.bestReceiver(p, null);
       if (r) this.kickPass(p.i, r.i); else if (dv) this.kickLoose(p.i, dv, 16); else this.kickLoose(p.i, { x: this.dir(p.team), y: 0 }, 14);
+    }
+    skillMove(p) { // a dribble move: CUT past the defender coming at you, or a BURST of speed when nobody is close
+      if (p.moveCool > 0 || p.moveT > 0) return;
+      const inp = p.input, n = Math.hypot(inp.mx, inp.my);
+      const dir = n > 0.3 ? { x: inp.mx / n, y: inp.my / n } : Math.hypot(p.fx, p.fy) > 0.5 ? { x: p.fx, y: p.fy } : { x: this.dir(p.team), y: 0 };
+      let q = null, qd = 99;
+      for (const o of this.teamPlayers(1 - p.team)) { if (o.role === 'GK') continue; const dd = dist(o, p); if (dd < 3.5 && dd < qd && ((o.x - p.x) * dir.x + (o.y - p.y) * dir.y) > 0.2 * dd) { q = o; qd = dd; } }
+      p.stats.moves = (p.stats.moves || 0) + 1;
+      if (q) {
+        if (qd < 1.2 && this.rng() < 0.45) { // he is already on you: too late, he takes it
+          p.moveCool = 1.5; this.explain(p, 'movelate', q.hname || q.jersey, this.snapAround(p, { labels: { [q.i]: 'ON YOU' } }));
+          this.giveBall(q.i); q.kickCool = 0; p.kickCool = 0.6; this.emit({ type: 'move', kind: 'cut', by: p.i, vs: q.i, lost: true }); return;
+        }
+        const cross = dir.x * (q.y - p.y) - dir.y * (q.x - p.x), side = cross > 0 ? -1 : 1; // cut to the side he is NOT on
+        const mx = dir.x * 0.55 - dir.y * side, my = dir.y * 0.55 + dir.x * side, mn = Math.hypot(mx, my) || 1;
+        p.moveDir = { x: mx / mn, y: my / mn }; p.moveT = 0.5; p.moveSpeed = 1.7; p.moveCool = 2.5;
+        q.beatenT = 0.8; q.kickCool = Math.max(q.kickCool, 1.0); q.vx *= 0.3; q.vy *= 0.3; p.stats.beaten = (p.stats.beaten || 0) + 1;
+        this.emit({ type: 'move', kind: 'cut', by: p.i, vs: q.i });
+      } else { p.moveDir = dir; p.moveT = 0.7; p.moveSpeed = 1.55; p.moveCool = 2; this.emit({ type: 'move', kind: 'burst', by: p.i }); }
     }
     passToCaller(p) { // a teammate yelled "OPEN!": play it to him now if the lane is clear and he is onside
       const caller = this.teamPlayers(p.team).find(h => h.human && h !== p && this.wants(h, 'open')); if (!caller) return false;

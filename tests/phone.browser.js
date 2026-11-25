@@ -87,6 +87,7 @@ async function backToMenu(page) {
   await page.screenshot({ path: path.join(OUT, 'pocket-match.png') });
   // OPEN! button: visible on touch, and tapping it makes the player yell (the coach reacts)
   check(await page.$eval('#tOpen', b => b.style.display !== 'none' && b.offsetParent !== null), 'phone: the OPEN! button is shown next to PASS and SHOOT');
+  check(await page.$eval('#tMove', b => b.style.display !== 'none' && b.offsetParent !== null), 'phone: the MOVE button is shown above PASS');
   await page.tap('#tOpen'); await page.waitForTimeout(400);
   const yell = await page.$eval('#coachText', e => e.innerText);
   check(/call|yell|OPEN|Here it comes/i.test(yell), `phone: tapping OPEN! gets a reaction from the coach ("${yell.slice(0, 60)}")`);
